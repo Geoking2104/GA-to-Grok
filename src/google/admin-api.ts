@@ -1,6 +1,14 @@
 import { getAdminClient } from "./client.js";
+import { cacheGet, cacheSet, cacheKey, TTL } from "../cache/redis.js";
 
 export async function listProperties() {
+  const key = cacheKey("properties", { action: "list" });
+
+  const cached = await cacheGet(key);
+  if (cached) {
+    return { ...cached, _cached: true };
+  }
+
   const client = await getAdminClient();
 
   // First list accounts
@@ -34,22 +42,32 @@ export async function listProperties() {
     }
   }
 
-  return {
+  const result = {
     count: allProperties.length,
     properties: allProperties,
   };
+
+  await cacheSet(key, result, TTL.properties);
+  return result;
 }
 
 export async function getPropertyDetails(propertyId: string) {
-  const client = await getAdminClient();
   const id = propertyId.replace(/^properties\//, "");
+  const key = cacheKey("property", { propertyId: id });
+
+  const cached = await cacheGet(key);
+  if (cached) {
+    return { ...cached, _cached: true };
+  }
+
+  const client = await getAdminClient();
 
   const response = await client.properties.get({
     name: `properties/${id}`,
   });
 
   const p = response.data;
-  return {
+  const result = {
     propertyId: id,
     displayName: p.displayName,
     timeZone: p.timeZone,
@@ -57,4 +75,7 @@ export async function getPropertyDetails(propertyId: string) {
     industryCategory: p.industryCategory,
     parent: p.parent,
   };
+
+  await cacheSet(key, result, TTL.properties);
+  return result;
 }

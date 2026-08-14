@@ -3,7 +3,11 @@
 import { config } from "dotenv";
 config();
 
+import { initRedis } from "./cache/redis.js";
 import { startServer } from "./server.js";
+
+// Initialize optional Redis cache
+initRedis();
 
 const transport = process.argv.includes("--transport")
   ? process.argv[process.argv.indexOf("--transport") + 1]

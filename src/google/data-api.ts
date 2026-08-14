@@ -1,5 +1,6 @@
 import { getDataClient } from "./client.js";
 import { resolvePropertyId } from "../auth/service-account.js";
+import { cacheGet, cacheSet, cacheKey, TTL } from "../cache/redis.js";
 
 export interface RunReportParams {
   propertyId?: string;
@@ -15,11 +16,30 @@ export interface RunReportParams {
 }
 
 export async function runReport(params: RunReportParams) {
-  const client = await getDataClient();
   const propertyId = resolvePropertyId(params.propertyId);
 
+  // Build cache key
+  const key = cacheKey("report", {
+    propertyId,
+    metrics: params.metrics,
+    dimensions: params.dimensions || [],
+    startDate: params.startDate,
+    endDate: params.endDate,
+    limit: params.limit ?? 100,
+    dimensionFilter: params.dimensionFilter,
+    metricFilter: params.metricFilter,
+    orderBys: params.orderBys,
+  });
+
+  // Try cache first
+  const cached = await cacheGet(key);
+  if (cached) {
+    return { ...cached, _cached: true };
+  }
+
+  const client = await getDataClient();
+
   const request: any = {
-    property: `properties/${propertyId}`,
     dateRanges: [
       {
         startDate: params.startDate,
@@ -41,7 +61,12 @@ export async function runReport(params: RunReportParams) {
     requestBody: request,
   });
 
-  return formatReportResponse(response.data);
+  const formatted = formatReportResponse(response.data);
+
+  // Store in cache
+  await cacheSet(key, formatted, TTL.report);
+
+  return formatted;
 }
 
 export async function runRealtimeReport(params: {
@@ -50,6 +75,7 @@ export async function runRealtimeReport(params: {
   dimensions?: string[];
   limit?: number;
 }) {
+  // Realtime is never cached
   const client = await getDataClient();
   const propertyId = resolvePropertyId(params.propertyId);
 
@@ -66,8 +92,15 @@ export async function runRealtimeReport(params: {
 }
 
 export async function getMetadata(propertyId?: string) {
-  const client = await getDataClient();
   const id = resolvePropertyId(propertyId);
+  const key = cacheKey("metadata", { propertyId: id });
+
+  const cached = await cacheGet(key);
+  if (cached) {
+    return { ...cached, _cached: true };
+  }
+
+  const client = await getDataClient();
 
   const response = await client.properties.getMetadata({
     name: `properties/${id}/metadata`,
@@ -75,7 +108,7 @@ export async function getMetadata(propertyId?: string) {
 
   const data = response.data;
 
-  return {
+  const result = {
     propertyId: id,
     dimensions: (data.dimensions || []).map((d: any) => ({
       apiName: d.apiName,
@@ -93,6 +126,9 @@ export async function getMetadata(propertyId?: string) {
       type: m.type,
     })),
   };
+
+  await cacheSet(key, result, TTL.metadata);
+  return result;
 }
 
 function formatReportResponse(data: any) {
