@@ -12,6 +12,7 @@ import { gtmTools } from "./gtm.js";
 import { customEventTools } from "./custom-events.js";
 import { gtmWriteTools } from "./gtm-write.js";
 import { sgtmTools } from "./sgtm.js";
+import { mpSecretsTools } from "./mp-secrets.js";
 
 export interface ToolDefinition {
   name: string;
@@ -222,7 +223,7 @@ const coreAndBusinessTools: ToolDefinition[] = [
   {
     name: "analyze_ecommerce_data",
     description:
-      "Analyze real ecommerce performance from GA4: purchases, revenue, AOV, funnel conversion rates, top items, daily trend, and data-quality warnings.",
+      "Analyze real ecommerce performance from GA4: purchases, revenue, AOV, funnel, top items, data-quality warnings.",
     inputSchema: {
       type: "object",
       properties: {
@@ -243,6 +244,7 @@ export const tools: ToolDefinition[] = [
   ...customEventTools,
   ...gtmWriteTools,
   ...sgtmTools,
+  ...mpSecretsTools,
 ];
 
 export async function handleToolCall(name: string, args: Record<string, any>) {
