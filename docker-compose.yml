@@ -1,0 +1,39 @@
+version: "3.8"
+
+services:
+  ga-to-grok:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - TRANSPORT=http
+      - PORT=3000
+      - HOST=0.0.0.0
+      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/service-account.json
+      - GA4_PROPERTY_ID=${GA4_PROPERTY_ID:-}
+      - REDIS_URL=redis://redis:6379
+      - CACHE_TTL_REPORT=600
+      - CACHE_TTL_METADATA=3600
+    volumes:
+      # Mount your service account key
+      - ./service-account.json:/secrets/service-account.json:ro
+    depends_on:
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+volumes:
+  redis_data:

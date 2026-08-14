@@ -8,63 +8,50 @@ This connector allows Grok to query your GA4 properties directly through natural
 
 ## Features
 
-- ✅ **Service Account authentication**
-- ✅ **Core tools** + **Business tools** (traffic, pages, acquisition, devices, events)
-- ✅ **HTTP + SSE transport** for Grok Custom Connector
-- ✅ **Optional Redis caching** (quota protection + faster responses)
-- ✅ Docker support
+- ✅ Service Account authentication
+- ✅ Core + Business tools (traffic, pages, acquisition, devices, events)
+- ✅ **Robust multi-session SSE transport** (ready for Grok)
+- ✅ Optional Redis caching (quota protection)
+- ✅ Production-ready Docker + docker-compose
+- ✅ Deployment guides for **Fly.io** and **Railway**
 - 100% Open Source (**Apache-2.0**)
 
-## Current Status (v0.3.0)
+## Current Status (v0.4.0)
 
 - [x] Complete project structure
 - [x] Service Account authentication
 - [x] Core + Business tools
-- [x] SSE transport for remote Grok
-- [x] **Redis caching** (optional, with smart TTLs)
-- [ ] Better multi-session SSE handling
+- [x] Multi-session SSE transport
+- [x] Redis caching
+- [x] Docker + docker-compose + deployment docs
 - [ ] Streamable HTTP (newer protocol)
 
 ## Quick Start for Grok
 
 1. Create a Google Cloud Service Account → give it **Viewer** access on your GA4 properties
-2. Run the server (see [docs/GROK_SETUP.md](docs/GROK_SETUP.md))
+2. Deploy the server (see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md))
 3. Go to [grok.com/connectors](https://grok.com/connectors) → **New Connector → Custom**
 4. Paste: `https://your-server.com/sse`
 5. Start asking Grok
 
-## Installation
+## Installation (local)
 
 ```bash
 git clone https://github.com/Geoking2104/GA-to-Grok.git
 cd GA-to-Grok
-npm install
-npm run build
-```
-
-```bash
+npm install && npm run build
 cp .env.example .env
-# Set GOOGLE_APPLICATION_CREDENTIALS
-# Optionally set REDIS_URL=redis://localhost:6379
+# Edit .env
+
+npm run start:http
 ```
+
+### With Docker Compose (recommended for local testing)
 
 ```bash
-npm run start:stdio   # local
-npm run start:http    # for Grok
+# Place service-account.json in the project root
+docker compose up -d --build
 ```
-
-## Caching (Redis)
-
-Caching is **optional**. Just set `REDIS_URL` to enable it.
-
-| Data            | Default TTL |
-|-----------------|-------------|
-| Reports         | 10 minutes  |
-| Metadata        | 1 hour      |
-| Properties list | 30 minutes  |
-| Realtime        | never       |
-
-See [docs/CACHING.md](docs/CACHING.md) for full details.
 
 ## Available Tools
 
@@ -84,7 +71,8 @@ See [docs/CACHING.md](docs/CACHING.md) for full details.
 ## Documentation
 
 - [Grok Setup Guide](docs/GROK_SETUP.md)
-- [Caching](docs/CACHING.md)
+- [Deployment (Docker / Fly.io / Railway)](docs/DEPLOYMENT.md)
+- [Redis Caching](docs/CACHING.md)
 
 ## License
 

@@ -1,6 +1,6 @@
 {
   "name": "ga-to-grok",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Open-source MCP server connecting Google Analytics 4 to Grok (xAI)",
   "type": "module",
   "main": "dist/index.js",

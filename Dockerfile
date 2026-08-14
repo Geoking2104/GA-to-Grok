@@ -1,3 +1,4 @@
+# ─── Build stage ───────────────────────────────────────────────
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -10,20 +11,34 @@ COPY src ./src
 
 RUN npm run build
 
-# Production image
+# ─── Production stage ─────────────────────────────────────────
 FROM node:20-alpine
+
+# Security: run as non-root
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S mcp -u 1001 -G nodejs
 
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev && npm cache clean --force
 
 COPY --from=builder /app/dist ./dist
+
+# Create directory for secrets (optional volume)
+RUN mkdir -p /secrets && chown -R mcp:nodejs /secrets
+
+USER mcp
 
 ENV NODE_ENV=production
 ENV TRANSPORT=http
 ENV PORT=3000
+ENV HOST=0.0.0.0
 
 EXPOSE 3000
+
+# Healthcheck for orchestrators (Fly, Railway, Kubernetes...)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:3000/health || exit 1
 
 CMD ["node", "dist/index.js", "--transport", "http"]
