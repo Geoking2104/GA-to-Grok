@@ -17,6 +17,7 @@ import {
   compareGtmVsGa4Events,
 } from "../google/gtm-ga4-bridge.js";
 import { auditGa4SetupV2 } from "../google/gtm-audit-v2.js";
+import { validateEcommerceEvents } from "../google/ecommerce-validation.js";
 
 function success(data: any) {
   return {
@@ -37,18 +38,14 @@ function error(message: string) {
 }
 
 export const gtmTools = [
-  // ─── Phase 1 ────────────────────────────────────────────────
+  // ─── Discovery ──────────────────────────────────────────────
   {
     name: "list_gtm_accounts",
-    description:
-      "List all Google Tag Manager accounts accessible with the current credentials. Use this first to discover account IDs.",
+    description: "List all Google Tag Manager accounts accessible with the current credentials.",
     inputSchema: { type: "object", properties: {}, required: [] },
     handler: async () => {
-      try {
-        return success(await listGtmAccounts());
-      } catch (err: any) {
-        return error(err.message || "Failed to list GTM accounts");
-      }
+      try { return success(await listGtmAccounts()); }
+      catch (err: any) { return error(err.message); }
     },
   },
   {
@@ -56,17 +53,12 @@ export const gtmTools = [
     description: "List all containers belonging to a GTM account.",
     inputSchema: {
       type: "object",
-      properties: {
-        accountId: { type: "string", description: "GTM Account ID" },
-      },
+      properties: { accountId: { type: "string" } },
       required: ["accountId"],
     },
     handler: async (args: any) => {
-      try {
-        return success(await listGtmContainers(args.accountId));
-      } catch (err: any) {
-        return error(err.message || "Failed to list GTM containers");
-      }
+      try { return success(await listGtmContainers(args.accountId)); }
+      catch (err: any) { return error(err.message); }
     },
   },
   {
@@ -74,18 +66,12 @@ export const gtmTools = [
     description: "List workspaces of a GTM container.",
     inputSchema: {
       type: "object",
-      properties: {
-        accountId: { type: "string" },
-        containerId: { type: "string" },
-      },
+      properties: { accountId: { type: "string" }, containerId: { type: "string" } },
       required: ["accountId", "containerId"],
     },
     handler: async (args: any) => {
-      try {
-        return success(await listGtmWorkspaces(args.accountId, args.containerId));
-      } catch (err: any) {
-        return error(err.message || "Failed to list GTM workspaces");
-      }
+      try { return success(await listGtmWorkspaces(args.accountId, args.containerId)); }
+      catch (err: any) { return error(err.message); }
     },
   },
   {
@@ -102,18 +88,13 @@ export const gtmTools = [
     },
     handler: async (args: any) => {
       try {
-        return success(
-          await listGtmTags(args.accountId, args.containerId, args.workspaceId)
-        );
-      } catch (err: any) {
-        return error(err.message || "Failed to list GTM tags");
-      }
+        return success(await listGtmTags(args.accountId, args.containerId, args.workspaceId));
+      } catch (err: any) { return error(err.message); }
     },
   },
   {
     name: "get_ga4_tags",
-    description:
-      "List only GA4-related tags (Configuration + Event tags) in a workspace. Useful to understand how data is sent to GA4.",
+    description: "List only GA4 Configuration + Event tags in a workspace.",
     inputSchema: {
       type: "object",
       properties: {
@@ -125,48 +106,13 @@ export const gtmTools = [
     },
     handler: async (args: any) => {
       try {
-        return success(
-          await getGa4Tags(args.accountId, args.containerId, args.workspaceId)
-        );
-      } catch (err: any) {
-        return error(err.message || "Failed to get GA4 tags");
-      }
+        return success(await getGa4Tags(args.accountId, args.containerId, args.workspaceId));
+      } catch (err: any) { return error(err.message); }
     },
   },
   {
     name: "get_gtm_container_summary",
-    description:
-      "Get a high-level summary of a GTM container focused on GA4: Measurement IDs found, config tags, event tags.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        accountId: { type: "string" },
-        containerId: { type: "string" },
-        workspaceId: {
-          type: "string",
-          description: "Optional. Defaults to the Default Workspace.",
-        },
-      },
-      required: ["accountId", "containerId"],
-    },
-    handler: async (args: any) => {
-      try {
-        return success(
-          await getGtmContainerSummary(
-            args.accountId,
-            args.containerId,
-            args.workspaceId
-          )
-        );
-      } catch (err: any) {
-        return error(err.message || "Failed to get container summary");
-      }
-    },
-  },
-  {
-    name: "audit_ga4_setup",
-    description:
-      "Basic audit of the GA4 setup inside a GTM container (Phase 1). Prefer audit_ga4_setup_v2 for a complete analysis.",
+    description: "High-level GA4-focused summary of a GTM container.",
     inputSchema: {
       type: "object",
       properties: {
@@ -178,20 +124,15 @@ export const gtmTools = [
     },
     handler: async (args: any) => {
       try {
-        return success(
-          await auditGa4Setup(args.accountId, args.containerId, args.workspaceId)
-        );
-      } catch (err: any) {
-        return error(err.message || "Failed to audit GA4 setup");
-      }
+        return success(await getGtmContainerSummary(args.accountId, args.containerId, args.workspaceId));
+      } catch (err: any) { return error(err.message); }
     },
   },
 
-  // ─── Phase 2 — Triggers & Variables ─────────────────────────
+  // ─── Triggers & Variables ───────────────────────────────────
   {
     name: "list_gtm_triggers",
-    description:
-      "List all triggers in a GTM workspace. Useful to understand when tags fire (All Pages, Click, Custom Event, etc.).",
+    description: "List all triggers in a GTM workspace.",
     inputSchema: {
       type: "object",
       properties: {
@@ -203,18 +144,13 @@ export const gtmTools = [
     },
     handler: async (args: any) => {
       try {
-        return success(
-          await listGtmTriggers(args.accountId, args.containerId, args.workspaceId)
-        );
-      } catch (err: any) {
-        return error(err.message || "Failed to list GTM triggers");
-      }
+        return success(await listGtmTriggers(args.accountId, args.containerId, args.workspaceId));
+      } catch (err: any) { return error(err.message); }
     },
   },
   {
     name: "get_trigger_details",
-    description:
-      "Get full details of a specific GTM trigger (type, filters, conditions, custom event name, etc.).",
+    description: "Get full details of a specific GTM trigger.",
     inputSchema: {
       type: "object",
       properties: {
@@ -227,23 +163,13 @@ export const gtmTools = [
     },
     handler: async (args: any) => {
       try {
-        return success(
-          await getTriggerDetails(
-            args.accountId,
-            args.containerId,
-            args.workspaceId,
-            args.triggerId
-          )
-        );
-      } catch (err: any) {
-        return error(err.message || "Failed to get trigger details");
-      }
+        return success(await getTriggerDetails(args.accountId, args.containerId, args.workspaceId, args.triggerId));
+      } catch (err: any) { return error(err.message); }
     },
   },
   {
     name: "list_gtm_variables",
-    description:
-      "List all user-defined variables in a GTM workspace (Data Layer variables, JavaScript variables, constants, etc.).",
+    description: "List all user-defined variables in a GTM workspace.",
     inputSchema: {
       type: "object",
       properties: {
@@ -255,17 +181,13 @@ export const gtmTools = [
     },
     handler: async (args: any) => {
       try {
-        return success(
-          await listGtmVariables(args.accountId, args.containerId, args.workspaceId)
-        );
-      } catch (err: any) {
-        return error(err.message || "Failed to list GTM variables");
-      }
+        return success(await listGtmVariables(args.accountId, args.containerId, args.workspaceId));
+      } catch (err: any) { return error(err.message); }
     },
   },
   {
     name: "get_variable_details",
-    description: "Get full details of a specific GTM variable (type, parameters, format rules).",
+    description: "Get full details of a specific GTM variable.",
     inputSchema: {
       type: "object",
       properties: {
@@ -278,23 +200,13 @@ export const gtmTools = [
     },
     handler: async (args: any) => {
       try {
-        return success(
-          await getVariableDetails(
-            args.accountId,
-            args.containerId,
-            args.workspaceId,
-            args.variableId
-          )
-        );
-      } catch (err: any) {
-        return error(err.message || "Failed to get variable details");
-      }
+        return success(await getVariableDetails(args.accountId, args.containerId, args.workspaceId, args.variableId));
+      } catch (err: any) { return error(err.message); }
     },
   },
   {
     name: "get_tag_details",
-    description:
-      "Get full enriched details of a specific GTM tag: parameters, eventName, Measurement IDs, and resolved firing/blocking trigger names.",
+    description: "Get full enriched details of a GTM tag (parameters, triggers, eventName…).",
     inputSchema: {
       type: "object",
       properties: {
@@ -307,25 +219,15 @@ export const gtmTools = [
     },
     handler: async (args: any) => {
       try {
-        return success(
-          await getTagDetails(
-            args.accountId,
-            args.containerId,
-            args.workspaceId,
-            args.tagId
-          )
-        );
-      } catch (err: any) {
-        return error(err.message || "Failed to get tag details");
-      }
+        return success(await getTagDetails(args.accountId, args.containerId, args.workspaceId, args.tagId));
+      } catch (err: any) { return error(err.message); }
     },
   },
 
-  // ─── Phase 2 — GA4 data integration ─────────────────────────
+  // ─── Analysis & Audit ───────────────────────────────────────
   {
     name: "analyze_event_parameters",
-    description:
-      "Analyze all GA4 Event tags and check whether critical parameters (value, currency, transaction_id, etc.) are present. Extremely useful for ecommerce tracking quality.",
+    description: "Check critical parameters on all GA4 Event tags (value, currency, transaction_id…).",
     inputSchema: {
       type: "object",
       properties: {
@@ -337,96 +239,97 @@ export const gtmTools = [
     },
     handler: async (args: any) => {
       try {
-        return success(
-          await analyzeEventParameters(
-            args.accountId,
-            args.containerId,
-            args.workspaceId
-          )
-        );
-      } catch (err: any) {
-        return error(err.message || "Failed to analyze event parameters");
-      }
+        return success(await analyzeEventParameters(args.accountId, args.containerId, args.workspaceId));
+      } catch (err: any) { return error(err.message); }
     },
   },
   {
     name: "compare_gtm_vs_ga4_events",
-    description:
-      "Cross-reference events configured in GTM with events actually received in a GA4 property. Shows match rate and discrepancies.",
+    description: "Cross-reference GTM configured events vs events actually received in GA4.",
     inputSchema: {
       type: "object",
       properties: {
         accountId: { type: "string" },
         containerId: { type: "string" },
         workspaceId: { type: "string" },
-        propertyId: { type: "string", description: "GA4 Property ID" },
-        startDate: { type: "string", description: "Default: 30daysAgo" },
-        endDate: { type: "string", description: "Default: yesterday" },
+        propertyId: { type: "string" },
+        startDate: { type: "string" },
+        endDate: { type: "string" },
       },
       required: ["accountId", "containerId", "workspaceId", "propertyId"],
     },
     handler: async (args: any) => {
       try {
-        return success(
-          await compareGtmVsGa4Events({
-            accountId: args.accountId,
-            containerId: args.containerId,
-            workspaceId: args.workspaceId,
-            propertyId: args.propertyId,
-            startDate: args.startDate,
-            endDate: args.endDate,
-          })
-        );
-      } catch (err: any) {
-        return error(err.message || "Failed to compare GTM vs GA4 events");
-      }
+        return success(await compareGtmVsGa4Events(args));
+      } catch (err: any) { return error(err.message); }
     },
   },
-
-  // ─── Phase 2 — Full Audit V2 ────────────────────────────────
   {
-    name: "audit_ga4_setup_v2",
-    description:
-      "Full intelligent audit of a GTM container for GA4 quality. Combines configuration checks, parameter quality, trigger validation, and optionally real GA4 data comparison. Returns a score (0-100), grade (A-F), severity-ranked issues and actionable recommendations. Provide propertyId to enable live data cross-check.",
+    name: "audit_ga4_setup",
+    description: "Basic GA4 setup audit (Phase 1). Prefer audit_ga4_setup_v2.",
     inputSchema: {
       type: "object",
       properties: {
-        accountId: { type: "string", description: "GTM Account ID" },
-        containerId: { type: "string", description: "GTM Container ID" },
-        workspaceId: {
-          type: "string",
-          description: "Optional. Defaults to Default Workspace",
-        },
-        propertyId: {
-          type: "string",
-          description:
-            "Optional GA4 Property ID. When provided, the audit also compares configured vs received events.",
-        },
-        startDate: {
-          type: "string",
-          description: "Used only when propertyId is set. Default: 30daysAgo",
-        },
-        endDate: {
-          type: "string",
-          description: "Used only when propertyId is set. Default: yesterday",
-        },
+        accountId: { type: "string" },
+        containerId: { type: "string" },
+        workspaceId: { type: "string" },
       },
       required: ["accountId", "containerId"],
     },
     handler: async (args: any) => {
       try {
-        return success(
-          await auditGa4SetupV2({
-            accountId: args.accountId,
-            containerId: args.containerId,
-            workspaceId: args.workspaceId,
-            propertyId: args.propertyId,
-            startDate: args.startDate,
-            endDate: args.endDate,
-          })
-        );
+        return success(await auditGa4Setup(args.accountId, args.containerId, args.workspaceId));
+      } catch (err: any) { return error(err.message); }
+    },
+  },
+  {
+    name: "audit_ga4_setup_v2",
+    description:
+      "Full intelligent audit of a GTM container for GA4. Combines config checks, parameter quality, triggers, and optional live GA4 data comparison. Returns score, grade, issues and recommendations.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        accountId: { type: "string" },
+        containerId: { type: "string" },
+        workspaceId: { type: "string" },
+        propertyId: { type: "string", description: "Optional — enables live data cross-check" },
+        startDate: { type: "string" },
+        endDate: { type: "string" },
+      },
+      required: ["accountId", "containerId"],
+    },
+    handler: async (args: any) => {
+      try {
+        return success(await auditGa4SetupV2(args));
+      } catch (err: any) { return error(err.message); }
+    },
+  },
+
+  // ─── Ecommerce validation ───────────────────────────────────
+  {
+    name: "validate_ecommerce_events",
+    description:
+      "Validate GA4 ecommerce events against the official Google schema (purchase, add_to_cart, begin_checkout, view_item, etc.). Checks required/recommended parameters, items array, triggers, and optionally cross-checks with real GA4 revenue & event counts. Returns a funnel score and actionable fixes.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        accountId: { type: "string", description: "GTM Account ID" },
+        containerId: { type: "string", description: "GTM Container ID" },
+        workspaceId: { type: "string", description: "GTM Workspace ID" },
+        propertyId: {
+          type: "string",
+          description: "Optional GA4 Property ID — enables live event count & revenue check",
+        },
+        startDate: { type: "string", description: "Default: 30daysAgo" },
+        endDate: { type: "string", description: "Default: yesterday" },
+      },
+      required: ["accountId", "containerId", "workspaceId"],
+    },
+    handler: async (args: any) => {
+      try {
+        return success(await validateEcommerceEvents(args));
       } catch (err: any) {
-        return error(err.message || "Failed to run audit v2");
+        return error(err.message || "Failed to validate ecommerce events");
       }
     },
   },
