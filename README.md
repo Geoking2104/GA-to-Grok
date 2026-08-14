@@ -9,26 +9,20 @@ This connector allows Grok to query your GA4 properties directly through natural
 ## Features
 
 - ✅ **Service Account authentication**
-- ✅ **Core tools**: `list_properties`, `run_report`, `run_realtime_report`, `get_metadata`
-- ✅ **Business tools** (optimized for Grok):
-  - `get_traffic_overview`
-  - `get_top_pages`
-  - `get_acquisition`
-  - `get_devices`
-  - `get_events_summary`
-- ✅ **HTTP + SSE transport** ready for Grok Custom Connector
+- ✅ **Core tools** + **Business tools** (traffic, pages, acquisition, devices, events)
+- ✅ **HTTP + SSE transport** for Grok Custom Connector
+- ✅ **Optional Redis caching** (quota protection + faster responses)
 - ✅ Docker support
 - 100% Open Source (**Apache-2.0**)
 
-## Current Status (v0.2.0)
+## Current Status (v0.3.0)
 
 - [x] Complete project structure
 - [x] Service Account authentication
-- [x] Core Google Analytics Data API + Admin API
-- [x] Business tools
+- [x] Core + Business tools
 - [x] SSE transport for remote Grok
+- [x] **Redis caching** (optional, with smart TTLs)
 - [ ] Better multi-session SSE handling
-- [ ] Quota management & caching
 - [ ] Streamable HTTP (newer protocol)
 
 ## Quick Start for Grok
@@ -37,11 +31,7 @@ This connector allows Grok to query your GA4 properties directly through natural
 2. Run the server (see [docs/GROK_SETUP.md](docs/GROK_SETUP.md))
 3. Go to [grok.com/connectors](https://grok.com/connectors) → **New Connector → Custom**
 4. Paste: `https://your-server.com/sse`
-5. Start asking Grok:
-
-   - "Give me a traffic overview for the last 7 days"
-   - "What are the top pages this month?"
-   - "Show acquisition by channel"
+5. Start asking Grok
 
 ## Installation
 
@@ -54,16 +44,27 @@ npm run build
 
 ```bash
 cp .env.example .env
-# Set GOOGLE_APPLICATION_CREDENTIALS and optionally GA4_PROPERTY_ID
+# Set GOOGLE_APPLICATION_CREDENTIALS
+# Optionally set REDIS_URL=redis://localhost:6379
 ```
 
 ```bash
-# Local
-npm run start:stdio
-
-# For Grok (remote)
-npm run start:http
+npm run start:stdio   # local
+npm run start:http    # for Grok
 ```
+
+## Caching (Redis)
+
+Caching is **optional**. Just set `REDIS_URL` to enable it.
+
+| Data            | Default TTL |
+|-----------------|-------------|
+| Reports         | 10 minutes  |
+| Metadata        | 1 hour      |
+| Properties list | 30 minutes  |
+| Realtime        | never       |
+
+See [docs/CACHING.md](docs/CACHING.md) for full details.
 
 ## Available Tools
 
@@ -83,6 +84,7 @@ npm run start:http
 ## Documentation
 
 - [Grok Setup Guide](docs/GROK_SETUP.md)
+- [Caching](docs/CACHING.md)
 
 ## License
 
