@@ -4,7 +4,7 @@
 
 Grok can read GA4 data, audit GTM/sGTM setups, validate ecommerce events, configure Measurement Protocol secrets, run dual-tagging / cutover checklists, and more — via **MCP tools** or a **CLI**.
 
-> Compatible with **Grok Connectors** (Custom MCP) and self-hosted deployments.  
+> Compatible with **Grok Build**, **Grok Connectors** (Custom MCP), Claude Code / Cursor (`.mcp.json`), and self-hosted deployments.  
 > **Apache-2.0** license · Node ≥ 20
 
 ---
@@ -122,7 +122,50 @@ npm run build
 
 ---
 
-## 3. Run the MCP server (for Grok)
+## 3. Grok Build packaging (ready out of the box)
+
+This repo ships Grok Build–ready files:
+
+| File | Role |
+|------|------|
+| `.grok/config.toml` | Project-scoped MCP server (`ga-to-grok`) |
+| `.mcp.json` | Claude Code / Cursor / Grok compatibility |
+| `.grok/plugins/ga-to-grok/` | Plugin stub |
+| `docs/GROK_BUILD.md` | Full packaging guide |
+
+### Local (stdio) in this repo
+
+```bash
+npm run build
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/sa.json
+
+grok mcp doctor ga-to-grok
+cd /path/to/GA-to-Grok && grok
+```
+
+Or register explicitly:
+
+```bash
+grok mcp add --scope project ga-to-grok -- node dist/index.js --transport stdio
+```
+
+### Remote HTTP / SSE
+
+```bash
+grok mcp add --transport http ga-to-grok https://your-host.example.com/sse
+```
+
+### grok.com Connectors
+
+1. Deploy with `TRANSPORT=http` + public HTTPS
+2. [grok.com/connectors](https://grok.com/connectors) → **New Connector → Custom**
+3. URL: `https://your-server.com/sse`
+
+Details: **[docs/GROK_BUILD.md](docs/GROK_BUILD.md)** · [docs/GROK_SETUP.md](docs/GROK_SETUP.md)
+
+---
+
+## 4. Run the MCP server
 
 ### Local STDIO
 
@@ -132,7 +175,7 @@ npm run start:stdio
 node dist/index.js --transport stdio
 ```
 
-### HTTP / SSE (remote connector)
+### HTTP / SSE
 
 ```bash
 npm run start:http
@@ -146,119 +189,59 @@ docker compose up -d
 # see docs/DEPLOYMENT.md for Fly.io / Railway
 ```
 
-### Connect in Grok
-
-1. Deploy with a public HTTPS URL (or use a tunnel for dev)
-2. [grok.com/connectors](https://grok.com/connectors) → **New Connector → Custom**
-3. SSE URL: `https://your-server.com/sse`
-4. Ask Grok, e.g. *“Audit my GA4 setup on GTM container …”*
-
-Details: [docs/GROK_SETUP.md](docs/GROK_SETUP.md)
-
 ---
 
-## 4. CLI — full validation workflow
-
-Every major step has a CLI command (`ga-to-grok-cli` / `npm run cli -- …`).
+## 5. CLI — full validation workflow
 
 ```bash
 npm run cli -- help
 ```
 
-### Recommended implementation sequence
+### Recommended sequence
 
 ```bash
-# 0. Discovery
 npm run cli -- list-properties
 npm run cli -- list-sgtm
-npm run cli -- list-streams --property 123456789
-
-# 1. Audit GTM Web
-npm run cli -- audit-web \
-  --account WEB_ACCOUNT_ID \
-  --container WEB_CONTAINER_ID \
-  --property 123456789
-
-# 2. Audit sGTM
-npm run cli -- audit-sgtm \
-  --account SERVER_ACCOUNT_ID \
-  --container SERVER_CONTAINER_ID
-
-npm run cli -- audit-mp-client \
-  --account SERVER_ACCOUNT_ID \
-  --container SERVER_CONTAINER_ID
-
-# 3. Measurement Protocol secrets & config
+npm run cli -- audit-web --account WEB_ACCOUNT_ID --container WEB_CONTAINER_ID --property 123456789
+npm run cli -- audit-sgtm --account SERVER_ACCOUNT_ID --container SERVER_CONTAINER_ID
 npm run cli -- verify-secrets --property 123456789
-npm run cli -- suggest-mp \
-  --property 123456789 \
-  --mode both \
-  --sgtm-url https://tags.example.com
-
-# Create secret (preview then apply)
-npm run cli -- create-mp-secret \
-  --property 123456789 --stream STREAM_ID --name backend-prod --dry-run
-npm run cli -- create-mp-secret \
-  --property 123456789 --stream STREAM_ID --name backend-prod --confirm
-
-# 4. Dual-tagging comparison (S3)
+npm run cli -- suggest-mp --property 123456789 --mode both --sgtm-url https://tags.example.com
 npm run cli -- compare-dual \
   --web-account WEB_ACCOUNT_ID --web-container WEB_CONTAINER_ID \
   --server-account SERVER_ACCOUNT_ID --server-container SERVER_CONTAINER_ID \
   --property 123456789
-
-# 5. Cutover checklist (S4)
 npm run cli -- cutover-checklist \
   --web-account WEB_ACCOUNT_ID --web-container WEB_CONTAINER_ID \
   --server-account SERVER_ACCOUNT_ID --server-container SERVER_CONTAINER_ID \
-  --property 123456789 \
-  --health-url https://tags.example.com/healthy
-
-# 6. Health / observability (S5)
+  --property 123456789 --health-url https://tags.example.com/healthy
 npm run cli -- health --url https://tags.example.com
-npm run cli -- observability --url https://tags.example.com --property 123456789
-
-# Bonus analytics
-npm run cli -- analyze-ecommerce --property 123456789
-npm run cli -- traffic --property 123456789 --start 7daysAgo
 ```
 
 Full reference: [docs/CLI.md](docs/CLI.md)
 
-### One-shot local CI-style validation
-
 ```bash
-export GOOGLE_CREDENTIALS_JSON="$(cat sa.json)"
-export GA4_PROPERTY_ID=123456789
-export GTM_WEB_ACCOUNT_ID=...
-export GTM_WEB_CONTAINER_ID=...
-export GTM_SERVER_ACCOUNT_ID=...
-export GTM_SERVER_CONTAINER_ID=...
-export SGTM_HEALTH_URL=https://tags.example.com/healthy
-
-npm run build
-npm run validate:ci   # scripts/ci-validate.sh → reports/*.json
+npm run validate:ci   # scripts/ci-validate.sh
 ```
 
 ---
 
-## 5. How to implement server-side tracking (with this repo)
+## 6. How to implement server-side tracking
 
-1. **Stabilize web GA4/GTM** — `audit-web`, `validate_ecommerce_events` (via Grok or tools)
-2. **Deploy sGTM** on a first-party host (`tags.example.com`) — Cloud Run / App Engine
-3. **Audit server container** — `audit-sgtm` (GA4 client + GA4 tag + optional MP client)
-4. **Configure MP** — `verify-secrets` → `suggest-mp` → optional `create-mp-secret`
-5. **Compare parity** — `compare-dual` (web tags vs GA4 received events vs sGTM readiness)
-6. **Gate cutover** — `cutover-checklist` until `readyForDualTagging` / `readyForCutover`
-7. **Enable `server_container_url`** on web GA4 config (progressive traffic)
-8. **Monitor** — `health` + `observability` + `analyze-ecommerce` for 48–72h
-9. **Turn off client-side direct hits** once parity is proven
+1. Stabilize web GA4/GTM — `audit-web`, `validate_ecommerce_events`
+2. Deploy sGTM first-party (`tags.example.com`)
+3. `audit-sgtm` (GA4 client + tag + optional MP client)
+4. `verify-secrets` → `suggest-mp` → optional `create-mp-secret`
+5. `compare-dual`
+6. `cutover-checklist` until `readyForDualTagging` / `readyForCutover`
+7. Enable `server_container_url` progressively
+8. Monitor with `health` + `observability` + `analyze-ecommerce` (48–72h)
+9. Turn off client-side direct hits once parity is proven
 
-Architecture deep-dive: [docs/SERVER_SIDE_TRACKING_ARCHITECTURE.md](docs/SERVER_SIDE_TRACKING_ARCHITECTURE.md)
+→ [docs/SERVER_SIDE_TRACKING_ARCHITECTURE.md](docs/SERVER_SIDE_TRACKING_ARCHITECTURE.md)
 
 ---
 
-## 6. Main MCP tools (Grok)
+## 7. Main MCP tools
 
 ### GA4
 
@@ -267,7 +250,7 @@ Architecture deep-dive: [docs/SERVER_SIDE_TRACKING_ARCHITECTURE.md](docs/SERVER_
 | `list_properties` / `get_property_details` | Discovery |
 | `get_traffic_overview` | Users, sessions, bounce rate… |
 | `get_top_pages` / `get_acquisition` / `get_devices` | Breakdowns |
-| `get_events_summary` / `run_report` / `run_realtime_report` | Events & flexible reports |
+| `get_events_summary` / `run_report` / `run_realtime_report` | Events & reports |
 | `analyze_ecommerce_data` | Funnel, revenue, AOV, data quality |
 
 ### GTM Web
@@ -293,24 +276,23 @@ Architecture deep-dive: [docs/SERVER_SIDE_TRACKING_ARCHITECTURE.md](docs/SERVER_
 
 ---
 
-## 7. CI/CD
+## 8. CI/CD
 
 | Workflow | When | What |
 |----------|------|------|
 | **CI** | push / PR | typecheck + build + CLI smoke |
 | **Validate** | manual (+ optional weekly cron) | live pipeline with SA secret |
 
-Configure repository **secret** `GOOGLE_CREDENTIALS_JSON` and **variables** `GA4_PROPERTY_ID`, `GTM_WEB_*`, `GTM_SERVER_*`, `SGTM_HEALTH_URL`.
-
-Details: [docs/CI_CD.md](docs/CI_CD.md)
+→ [docs/CI_CD.md](docs/CI_CD.md)
 
 ---
 
-## 8. Documentation index
+## 9. Documentation index
 
 | Doc | Content |
 |-----|---------|
-| [GROK_SETUP.md](docs/GROK_SETUP.md) | Connect MCP to Grok |
+| **[GROK_BUILD.md](docs/GROK_BUILD.md)** | **Grok Build packaging & install** |
+| [GROK_SETUP.md](docs/GROK_SETUP.md) | Connectors + Build overview |
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Docker / Fly / Railway |
 | [CLI.md](docs/CLI.md) | All CLI commands |
 | [CI_CD.md](docs/CI_CD.md) | GitHub Actions |
@@ -322,18 +304,17 @@ Details: [docs/CI_CD.md](docs/CI_CD.md)
 
 ---
 
-## 9. Project layout
+## 10. Project layout
 
 ```text
+.grok/config.toml          # Grok Build project MCP
+.mcp.json                  # Vendor-compatible MCP map
+.grok/plugins/ga-to-grok/  # Plugin stub
 src/
   index.ts / server.ts / cli.ts
-  auth/           Service Account + write gates
-  google/         GA4, GTM, sGTM, MP, ecommerce, audits
-  tools/          MCP tool registrations
-  cache/          Optional Redis
+  auth/ google/ tools/ cache/
 scripts/ci-validate.sh
-.github/workflows/ci.yml
-.github/workflows/validate.yml
+.github/workflows/
 docs/
 ```
 
