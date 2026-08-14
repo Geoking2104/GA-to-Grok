@@ -11,6 +11,7 @@ import {
 import { gtmTools } from "./gtm.js";
 import { customEventTools } from "./custom-events.js";
 import { gtmWriteTools } from "./gtm-write.js";
+import { sgtmTools } from "./sgtm.js";
 
 export interface ToolDefinition {
   name: string;
@@ -241,6 +242,7 @@ export const tools: ToolDefinition[] = [
   ...gtmTools,
   ...customEventTools,
   ...gtmWriteTools,
+  ...sgtmTools,
 ];
 
 export async function handleToolCall(name: string, args: Record<string, any>) {
