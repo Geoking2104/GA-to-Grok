@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "ga-to-grok": {
+      "command": "node",
+      "args": ["dist/index.js", "--transport", "stdio"],
+      "env": {
+        "GOOGLE_APPLICATION_CREDENTIALS": "${GOOGLE_APPLICATION_CREDENTIALS}",
+        "GOOGLE_CREDENTIALS_JSON": "${GOOGLE_CREDENTIALS_JSON}",
+        "GA4_PROPERTY_ID": "${GA4_PROPERTY_ID}",
+        "TRANSPORT": "stdio",
+        "GA4_WRITE_ENABLED": "false",
+        "GTM_WRITE_ENABLED": "false"
+      }
+    }
+  }
+}

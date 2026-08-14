@@ -1,0 +1,22 @@
+# GA-to-Grok plugin for Grok Build
+name = "ga-to-grok"
+version = "0.6.1"
+description = "Google Analytics 4 + GTM + sGTM + Measurement Protocol tools for Grok"
+author = "Geoking2104 / KayrosLab"
+license = "Apache-2.0"
+repository = "https://github.com/Geoking2104/GA-to-Grok"
+
+[mcp_servers.ga-to-grok]
+command = "node"
+# When installed as a plugin, prefer absolute path via GROK_PLUGIN_ROOT or run from repo root after build
+args = ["${GROK_PLUGIN_ROOT}/../../dist/index.js", "--transport", "stdio"]
+startup_timeout_sec = 45
+tool_timeout_sec = 120
+env = {
+  GOOGLE_APPLICATION_CREDENTIALS = "${GOOGLE_APPLICATION_CREDENTIALS}",
+  GOOGLE_CREDENTIALS_JSON = "${GOOGLE_CREDENTIALS_JSON}",
+  GA4_PROPERTY_ID = "${GA4_PROPERTY_ID}",
+  TRANSPORT = "stdio",
+  GA4_WRITE_ENABLED = "${GA4_WRITE_ENABLED:-false}",
+  GTM_WRITE_ENABLED = "${GTM_WRITE_ENABLED:-false}",
+}

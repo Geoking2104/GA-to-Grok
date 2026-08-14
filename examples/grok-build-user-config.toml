@@ -1,0 +1,21 @@
+# Example snippet for ~/.grok/config.toml (user-level)
+# Copy the relevant block into your user config.
+
+# ── Local stdio (after cloning & building the repo) ─────────────
+[mcp_servers.ga-to-grok]
+command = "node"
+args = ["/ABS/PATH/TO/GA-to-Grok/dist/index.js", "--transport", "stdio"]
+startup_timeout_sec = 45
+tool_timeout_sec = 120
+env = {
+  GOOGLE_APPLICATION_CREDENTIALS = "${GOOGLE_APPLICATION_CREDENTIALS}",
+  GOOGLE_CREDENTIALS_JSON = "${GOOGLE_CREDENTIALS_JSON}",
+  GA4_PROPERTY_ID = "${GA4_PROPERTY_ID}",
+  GA4_WRITE_ENABLED = "false",
+  GTM_WRITE_ENABLED = "false",
+}
+
+# ── Remote HTTP / SSE (production connector) ────────────────────
+# [mcp_servers.ga-to-grok-remote]
+# url = "https://your-ga-to-grok.example.com/sse"
+# headers = { "Authorization" = "Bearer ${GA_TO_GROK_TOKEN}" }

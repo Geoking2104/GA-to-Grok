@@ -1,0 +1,27 @@
+# GA-to-Grok — project-scoped MCP for Grok Build
+# https://github.com/Geoking2104/GA-to-Grok
+#
+# Load order: Grok walks from cwd up to git root and reads each .grok/config.toml
+# Project entries override user-level servers with the same name.
+#
+# Required env (set in your shell or secrets manager):
+#   GOOGLE_APPLICATION_CREDENTIALS  or  GOOGLE_CREDENTIALS_JSON
+# Optional:
+#   GA4_PROPERTY_ID
+#   REDIS_URL
+#   GA4_WRITE_ENABLED / GTM_WRITE_ENABLED  (default writes allowed unless false)
+
+[mcp_servers.ga-to-grok]
+command = "node"
+args = ["dist/index.js", "--transport", "stdio"]
+startup_timeout_sec = 45
+tool_timeout_sec = 120
+env = {
+  GOOGLE_APPLICATION_CREDENTIALS = "${GOOGLE_APPLICATION_CREDENTIALS}",
+  GOOGLE_CREDENTIALS_JSON = "${GOOGLE_CREDENTIALS_JSON}",
+  GA4_PROPERTY_ID = "${GA4_PROPERTY_ID}",
+  REDIS_URL = "${REDIS_URL}",
+  GA4_WRITE_ENABLED = "${GA4_WRITE_ENABLED:-false}",
+  GTM_WRITE_ENABLED = "${GTM_WRITE_ENABLED:-false}",
+  TRANSPORT = "stdio",
+}
