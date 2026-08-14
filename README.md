@@ -8,32 +8,34 @@ This connector allows Grok to query your GA4 properties directly through natural
 
 ## Features
 
-- MCP Server with Streamable HTTP / SSE (required by Grok remote connectors)
-- STDIO mode for local development (Cursor, Claude Desktop...)
-- Service Account + OAuth 2.0 authentication ready
-- Core tools: `list_properties`, `run_report`, `run_realtime_report`, `get_metadata`
-- Pre-built business tools planned (traffic overview, top pages, acquisition...)
-- Natural language date parsing
-- Quota-aware design
+- ✅ **Service Account authentication** (GOOGLE_APPLICATION_CREDENTIALS or GOOGLE_CREDENTIALS_JSON)
+- ✅ **Core tools working**:
+  - `list_properties` — discover accessible GA4 properties
+  - `get_property_details`
+  - `get_metadata` — dimensions & metrics (including custom)
+  - `run_report` — flexible reporting with relative dates
+  - `run_realtime_report` — last 30 minutes data
+- MCP Server with STDIO (local) + HTTP mode skeleton
+- Docker support
 - 100% Open Source (**Apache-2.0**)
 
 ## Current Status
 
 - [x] Complete project structure
 - [x] TypeScript skeleton + MCP server base
-- [x] Tool registry with placeholder handlers
-- [x] Docker support
-- [x] Grok setup documentation
-- [x] GitHub Actions CI
-- [ ] Full Google Analytics Data API implementation
-- [ ] Business tools
-- [ ] Production Streamable HTTP transport
+- [x] **Service Account authentication**
+- [x] **Core Google Analytics Data API + Admin API integration**
+- [x] Working tools: `list_properties`, `run_report`, `run_realtime_report`, `get_metadata`
+- [x] Docker + CI
+- [ ] Business tools (traffic overview, top pages, acquisition...)
+- [ ] Full production Streamable HTTP / SSE transport (required for remote Grok)
+- [ ] Better quota management & caching
 
 ## Quick Start (Grok)
 
-1. Deploy or run this server (see [docs/GROK_SETUP.md](docs/GROK_SETUP.md))
-2. Go to [grok.com/connectors](https://grok.com/connectors)
-3. Click **New Connector → Custom**
+1. Create a Google Cloud Service Account with **Viewer** access on your GA4 properties
+2. Deploy or run this server (see [docs/GROK_SETUP.md](docs/GROK_SETUP.md))
+3. Go to [grok.com/connectors](https://grok.com/connectors) → **New Connector → Custom**
 4. Paste your public MCP server URL
 5. Start asking Grok about your analytics
 
@@ -44,6 +46,14 @@ git clone https://github.com/Geoking2104/GA-to-Grok.git
 cd GA-to-Grok
 npm install
 npm run build
+```
+
+### Environment
+
+```bash
+cp .env.example .env
+# Edit .env and set GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+# Optionally set GA4_PROPERTY_ID=123456789
 ```
 
 ### Local (STDIO)
@@ -58,24 +68,15 @@ npm run start:stdio
 npm run start:http
 ```
 
-## Environment Variables
+## Available Tools
 
-See [`.env.example`](.env.example)
-
-## Project Structure
-
-```
-├── src/
-│   ├── index.ts
-│   ├── server.ts
-│   ├── tools/
-│   └── types/
-├── docs/
-│   └── GROK_SETUP.md
-├── examples/
-├── Dockerfile
-└── ...
-```
+| Tool | Description |
+|------|-------------|
+| `list_properties` | List all accessible GA4 properties |
+| `get_property_details` | Details of a specific property |
+| `get_metadata` | Available dimensions & metrics |
+| `run_report` | Flexible report (metrics + dimensions + date range) |
+| `run_realtime_report` | Realtime data (last 30 min) |
 
 ## Documentation
 
