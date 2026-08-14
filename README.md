@@ -291,6 +291,7 @@ npm run validate:ci   # scripts/ci-validate.sh
 
 | Doc | Content |
 |-----|---------|
+| **[PRESENTATION.md](docs/PRESENTATION.md)** | **Pitch & marketing guide (agencies / e-commerce)** |
 | **[GROK_BUILD.md](docs/GROK_BUILD.md)** | **Grok Build packaging & install** |
 | [GROK_SETUP.md](docs/GROK_SETUP.md) | Connectors + Build overview |
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Docker / Fly / Railway |
