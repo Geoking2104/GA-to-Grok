@@ -7,6 +7,7 @@ import {
   getDevices,
   getEventsSummary,
 } from "./business.js";
+import { gtmTools } from "./gtm.js";
 
 export interface ToolDefinition {
   name: string;
@@ -33,7 +34,7 @@ function error(message: string) {
   };
 }
 
-export const tools: ToolDefinition[] = [
+const coreAndBusinessTools: ToolDefinition[] = [
   // ─── Discovery ───────────────────────────────────────────────
   {
     name: "list_properties",
@@ -184,14 +185,8 @@ export const tools: ToolDefinition[] = [
       type: "object",
       properties: {
         propertyId: { type: "string" },
-        startDate: {
-          type: "string",
-          description: "Default: 7daysAgo",
-        },
-        endDate: {
-          type: "string",
-          description: "Default: yesterday",
-        },
+        startDate: { type: "string", description: "Default: 7daysAgo" },
+        endDate: { type: "string", description: "Default: yesterday" },
       },
       required: [],
     },
@@ -256,6 +251,11 @@ export const tools: ToolDefinition[] = [
     },
     handler: getEventsSummary,
   },
+];
+
+export const tools: ToolDefinition[] = [
+  ...coreAndBusinessTools,
+  ...gtmTools,
 ];
 
 export async function handleToolCall(name: string, args: Record<string, any>) {

@@ -1,8 +1,8 @@
 import { GoogleAuth, JWT } from "google-auth-library";
-import { readFileSync } from "fs";
 
 const SCOPES = [
   "https://www.googleapis.com/auth/analytics.readonly",
+  "https://www.googleapis.com/auth/tagmanager.readonly",
 ];
 
 /**
