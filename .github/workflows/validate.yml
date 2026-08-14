@@ -1,0 +1,101 @@
+name: Validate (GA4 / GTM / sGTM)
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_web_audit:
+        description: "Run web GTM audit"
+        type: boolean
+        default: true
+      run_sgtm_audit:
+        description: "Run sGTM audit"
+        type: boolean
+        default: true
+      run_secrets:
+        description: "Verify GA4 MP secrets"
+        type: boolean
+        default: true
+      run_dual:
+        description: "Compare dual-tagging"
+        type: boolean
+        default: true
+      run_cutover:
+        description: "Run cutover checklist"
+        type: boolean
+        default: true
+      run_health:
+        description: "Probe sGTM health URL"
+        type: boolean
+        default: true
+  schedule:
+    # Optional weekly validation (Monday 06:00 UTC)
+    - cron: "0 6 * * 1"
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Live validation pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # Skip schedule if secrets are not configured (manual still allowed)
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'schedule' && vars.ENABLE_SCHEDULED_VALIDATE == 'true')
+
+    env:
+      GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+      GA4_PROPERTY_ID: ${{ vars.GA4_PROPERTY_ID || secrets.GA4_PROPERTY_ID }}
+      GTM_WEB_ACCOUNT_ID: ${{ vars.GTM_WEB_ACCOUNT_ID }}
+      GTM_WEB_CONTAINER_ID: ${{ vars.GTM_WEB_CONTAINER_ID }}
+      GTM_SERVER_ACCOUNT_ID: ${{ vars.GTM_SERVER_ACCOUNT_ID }}
+      GTM_SERVER_CONTAINER_ID: ${{ vars.GTM_SERVER_CONTAINER_ID }}
+      SGTM_HEALTH_URL: ${{ vars.SGTM_HEALTH_URL }}
+      # Never enable writes in CI by default
+      GA4_WRITE_ENABLED: "false"
+      GTM_WRITE_ENABLED: "false"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install & build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Check credentials
+        run: |
+          if [ -z "$GOOGLE_CREDENTIALS_JSON" ]; then
+            echo "Missing secret GOOGLE_CREDENTIALS_JSON"
+            exit 1
+          fi
+          echo "Credentials secret present"
+
+      - name: Run validation orchestrator
+        run: bash scripts/ci-validate.sh
+        env:
+          RUN_WEB_AUDIT: ${{ github.event_name == 'schedule' && 'true' || inputs.run_web_audit }}
+          RUN_SGTM_AUDIT: ${{ github.event_name == 'schedule' && 'true' || inputs.run_sgtm_audit }}
+          RUN_SECRETS: ${{ github.event_name == 'schedule' && 'true' || inputs.run_secrets }}
+          RUN_DUAL: ${{ github.event_name == 'schedule' && 'true' || inputs.run_dual }}
+          RUN_CUTOVER: ${{ github.event_name == 'schedule' && 'true' || inputs.run_cutover }}
+          RUN_HEALTH: ${{ github.event_name == 'schedule' && 'true' || inputs.run_health }}
+
+      - name: Upload validation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-reports
+          path: reports/
+          retention-days: 14
+          if-no-files-found: ignore

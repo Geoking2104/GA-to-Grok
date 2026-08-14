@@ -1,6 +1,6 @@
 {
   "name": "ga-to-grok",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Open-source MCP server connecting Google Analytics 4 + GTM/sGTM to Grok (xAI)",
   "type": "module",
   "main": "dist/index.js",
@@ -24,6 +24,7 @@
     "cli:health": "tsx src/cli.ts health",
     "cli:observability": "tsx src/cli.ts observability",
     "cli:list-sgtm": "tsx src/cli.ts list-sgtm",
+    "validate:ci": "bash scripts/ci-validate.sh",
     "test": "vitest run",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit"
