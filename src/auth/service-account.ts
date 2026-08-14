@@ -2,15 +2,12 @@ import { GoogleAuth, JWT } from "google-auth-library";
 
 const SCOPES = [
   "https://www.googleapis.com/auth/analytics.readonly",
+  // Required to create Measurement Protocol API secrets
+  "https://www.googleapis.com/auth/analytics.edit",
   "https://www.googleapis.com/auth/tagmanager.readonly",
-  // Phase 3 — required for creating tags / triggers in workspaces
   "https://www.googleapis.com/auth/tagmanager.edit.containers",
 ];
 
-/**
- * Creates an authenticated Google Auth client using Service Account.
- * Supports both file path (GOOGLE_APPLICATION_CREDENTIALS) and inline JSON (GOOGLE_CREDENTIALS_JSON).
- */
 export async function getAuthClient(): Promise<JWT | GoogleAuth> {
   if (process.env.GOOGLE_CREDENTIALS_JSON) {
     try {
@@ -45,12 +42,15 @@ export function resolvePropertyId(propertyId?: string): string {
   return id.replace(/^properties\//, "");
 }
 
-/** Hard safety switch for write operations */
 export function assertWriteEnabled() {
-  // Default: writes enabled if edit scope is present, unless explicitly disabled
   if (process.env.GTM_WRITE_ENABLED === "false") {
     throw new Error(
-      "GTM write operations are disabled (GTM_WRITE_ENABLED=false). Set GTM_WRITE_ENABLED=true to allow tag/trigger creation."
+      "Write operations are disabled (GTM_WRITE_ENABLED=false). Set GTM_WRITE_ENABLED=true to allow writes."
+    );
+  }
+  if (process.env.GA4_WRITE_ENABLED === "false") {
+    throw new Error(
+      "GA4 write operations are disabled (GA4_WRITE_ENABLED=false). Set GA4_WRITE_ENABLED=true to allow secret creation."
     );
   }
 }
