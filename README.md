@@ -1,11 +1,11 @@
 # GA-to-Grok
 
-**Open-source MCP server** connecting **Google Analytics 4**, **Google Tag Manager** (web + **server-side**) and **Measurement Protocol** to **Grok** (xAI).
+**Open-source MCP server** connecting **Google Analytics 4**, **Google Tag Manager** (web + **server-side**), and **Measurement Protocol** to **Grok** (xAI).
 
 Grok can read GA4 data, audit GTM/sGTM setups, validate ecommerce events, configure Measurement Protocol secrets, run dual-tagging / cutover checklists, and more — via **MCP tools** or a **CLI**.
 
 > Compatible with **Grok Connectors** (Custom MCP) and self-hosted deployments.  
-> Licence **Apache-2.0** · Node ≥ 20
+> **Apache-2.0** license · Node ≥ 20
 
 ---
 
@@ -151,13 +151,13 @@ docker compose up -d
 1. Deploy with a public HTTPS URL (or use a tunnel for dev)
 2. [grok.com/connectors](https://grok.com/connectors) → **New Connector → Custom**
 3. SSE URL: `https://your-server.com/sse`
-4. Ask Grok, e.g. *“Audite mon setup GA4 sur le container GTM …”*
+4. Ask Grok, e.g. *“Audit my GA4 setup on GTM container …”*
 
 Details: [docs/GROK_SETUP.md](docs/GROK_SETUP.md)
 
 ---
 
-## 4. CLI — implement the full validation workflow
+## 4. CLI — full validation workflow
 
 Every major step has a CLI command (`ga-to-grok-cli` / `npm run cli -- …`).
 
@@ -252,7 +252,7 @@ npm run validate:ci   # scripts/ci-validate.sh → reports/*.json
 6. **Gate cutover** — `cutover-checklist` until `readyForDualTagging` / `readyForCutover`
 7. **Enable `server_container_url`** on web GA4 config (progressive traffic)
 8. **Monitor** — `health` + `observability` + `analyze-ecommerce` for 48–72h
-9. **Cut client-side direct hits** when parité is proven
+9. **Turn off client-side direct hits** once parity is proven
 
 Architecture deep-dive: [docs/SERVER_SIDE_TRACKING_ARCHITECTURE.md](docs/SERVER_SIDE_TRACKING_ARCHITECTURE.md)
 
@@ -265,7 +265,7 @@ Architecture deep-dive: [docs/SERVER_SIDE_TRACKING_ARCHITECTURE.md](docs/SERVER_
 | Tool | Description |
 |------|-------------|
 | `list_properties` / `get_property_details` | Discovery |
-| `get_traffic_overview` | Users, sessions, bounce… |
+| `get_traffic_overview` | Users, sessions, bounce rate… |
 | `get_top_pages` / `get_acquisition` / `get_devices` | Breakdowns |
 | `get_events_summary` / `run_report` / `run_realtime_report` | Events & flexible reports |
 | `analyze_ecommerce_data` | Funnel, revenue, AOV, data quality |
