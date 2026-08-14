@@ -15,6 +15,10 @@ async function getTagManagerClient() {
   return tagmanagerClient;
 }
 
+function workspacePath(accountId: string, containerId: string, workspaceId: string) {
+  return `accounts/${accountId}/containers/${containerId}/workspaces/${workspaceId}`;
+}
+
 /** List all GTM accounts accessible with current credentials */
 export async function listGtmAccounts() {
   const key = cacheKey("gtm-accounts", {});
@@ -79,7 +83,7 @@ export async function listGtmTags(
   workspaceId: string
 ) {
   const client = await getTagManagerClient();
-  const parent = `accounts/${accountId}/containers/${containerId}/workspaces/${workspaceId}`;
+  const parent = workspacePath(accountId, containerId, workspaceId);
   const res = await client.accounts.containers.workspaces.tags.list({ parent });
 
   const tags = (res.data.tag || []).map((t: any) => ({
@@ -95,6 +99,119 @@ export async function listGtmTags(
   return { accountId, containerId, workspaceId, count: tags.length, tags };
 }
 
+// ─── Phase 2 : Triggers ───────────────────────────────────────────────────
+
+/** GTM-09 — List all triggers in a workspace */
+export async function listGtmTriggers(
+  accountId: string,
+  containerId: string,
+  workspaceId: string
+) {
+  const key = cacheKey("gtm-triggers", { accountId, containerId, workspaceId });
+  const cached = await cacheGet(key);
+  if (cached) return { ...cached, _cached: true };
+
+  const client = await getTagManagerClient();
+  const parent = workspacePath(accountId, containerId, workspaceId);
+  const res = await client.accounts.containers.workspaces.triggers.list({ parent });
+
+  const triggers = (res.data.trigger || []).map((t: any) => ({
+    triggerId: t.triggerId,
+    name: t.name,
+    type: t.type,
+    filter: t.filter || [],
+    customEventFilter: t.customEventFilter || [],
+    path: t.path,
+  }));
+
+  const result = { accountId, containerId, workspaceId, count: triggers.length, triggers };
+  await cacheSet(key, result, TTL.properties);
+  return result;
+}
+
+/** GTM-10 — Get full details of a specific trigger */
+export async function getTriggerDetails(
+  accountId: string,
+  containerId: string,
+  workspaceId: string,
+  triggerId: string
+) {
+  const client = await getTagManagerClient();
+  const path = `${workspacePath(accountId, containerId, workspaceId)}/triggers/${triggerId}`;
+  const res = await client.accounts.containers.workspaces.triggers.get({ path });
+  const t = res.data;
+
+  return {
+    triggerId: t.triggerId,
+    name: t.name,
+    type: t.type,
+    filter: t.filter || [],
+    customEventFilter: t.customEventFilter || [],
+    waitForTags: t.waitForTags,
+    checkValidation: t.checkValidation,
+    uniqueTriggerId: t.uniqueTriggerId,
+    eventName: t.eventName,
+    interval: t.interval,
+    limit: t.limit,
+    path: t.path,
+    notes: t.notes,
+  };
+}
+
+// ─── Phase 2 : Variables ──────────────────────────────────────────────────
+
+/** GTM-11 — List all user-defined variables in a workspace */
+export async function listGtmVariables(
+  accountId: string,
+  containerId: string,
+  workspaceId: string
+) {
+  const key = cacheKey("gtm-variables", { accountId, containerId, workspaceId });
+  const cached = await cacheGet(key);
+  if (cached) return { ...cached, _cached: true };
+
+  const client = await getTagManagerClient();
+  const parent = workspacePath(accountId, containerId, workspaceId);
+  const res = await client.accounts.containers.workspaces.variables.list({ parent });
+
+  const variables = (res.data.variable || []).map((v: any) => ({
+    variableId: v.variableId,
+    name: v.name,
+    type: v.type,
+    parameter: v.parameter || [],
+    path: v.path,
+  }));
+
+  const result = { accountId, containerId, workspaceId, count: variables.length, variables };
+  await cacheSet(key, result, TTL.properties);
+  return result;
+}
+
+/** GTM-12 — Get full details of a specific variable */
+export async function getVariableDetails(
+  accountId: string,
+  containerId: string,
+  workspaceId: string,
+  variableId: string
+) {
+  const client = await getTagManagerClient();
+  const path = `${workspacePath(accountId, containerId, workspaceId)}/variables/${variableId}`;
+  const res = await client.accounts.containers.workspaces.variables.get({ path });
+  const v = res.data;
+
+  return {
+    variableId: v.variableId,
+    name: v.name,
+    type: v.type,
+    parameter: v.parameter || [],
+    formatValue: v.formatValue,
+    path: v.path,
+    notes: v.notes,
+  };
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────
+
 /** Extract Measurement IDs from tag parameters */
 function extractMeasurementIds(parameters: any[] = []): string[] {
   const ids: string[] = [];
@@ -106,7 +223,6 @@ function extractMeasurementIds(parameters: any[] = []): string[] {
     ) {
       ids.push(p.value);
     }
-    // Sometimes nested
     if (p.list) {
       for (const item of p.list) {
         if (item.map) {
@@ -126,6 +242,22 @@ function extractMeasurementIds(parameters: any[] = []): string[] {
   return [...new Set(ids)];
 }
 
+function extractEventName(parameters: any[] = []): string | null {
+  const p = parameters.find((x: any) => x.key === "eventName");
+  return p?.value || null;
+}
+
+function simplifyParameters(parameters: any[] = []) {
+  return parameters.map((p: any) => ({
+    key: p.key,
+    type: p.type,
+    value: p.value ?? null,
+    // Keep nested structures readable
+    list: p.list || undefined,
+    map: p.map || undefined,
+  }));
+}
+
 /** Get only GA4-related tags (googtag + gaawe + gaawc) */
 export async function getGa4Tags(
   accountId: string,
@@ -140,6 +272,7 @@ export async function getGa4Tags(
     .map((t: any) => ({
       ...t,
       measurementIds: extractMeasurementIds(t.parameter),
+      eventName: extractEventName(t.parameter),
       isConfigTag: t.type === "googtag" || t.type === "gaawc",
       isEventTag: t.type === "gaawe",
     }));
@@ -153,13 +286,57 @@ export async function getGa4Tags(
   };
 }
 
+/** GTM-13 — Get enriched details of a specific tag (with resolved trigger names) */
+export async function getTagDetails(
+  accountId: string,
+  containerId: string,
+  workspaceId: string,
+  tagId: string
+) {
+  const client = await getTagManagerClient();
+  const path = `${workspacePath(accountId, containerId, workspaceId)}/tags/${tagId}`;
+  const res = await client.accounts.containers.workspaces.tags.get({ path });
+  const t = res.data;
+
+  // Resolve trigger names
+  const triggersList = await listGtmTriggers(accountId, containerId, workspaceId);
+  const triggerMap = new Map(
+    triggersList.triggers.map((tr: any) => [tr.triggerId, tr.name])
+  );
+
+  const firingTriggers = (t.firingTriggerId || []).map((id: string) => ({
+    triggerId: id,
+    name: triggerMap.get(id) || "(unknown)",
+  }));
+
+  const blockingTriggers = (t.blockingTriggerId || []).map((id: string) => ({
+    triggerId: id,
+    name: triggerMap.get(id) || "(unknown)",
+  }));
+
+  return {
+    tagId: t.tagId,
+    name: t.name,
+    type: t.type,
+    measurementIds: extractMeasurementIds(t.parameter || []),
+    eventName: extractEventName(t.parameter || []),
+    parameters: simplifyParameters(t.parameter || []),
+    firingTriggers,
+    blockingTriggers,
+    priority: t.priority,
+    notes: t.notes,
+    path: t.path,
+    isConfigTag: t.type === "googtag" || t.type === "gaawc",
+    isEventTag: t.type === "gaawe",
+  };
+}
+
 /** High-level container summary focused on GA4 */
 export async function getGtmContainerSummary(
   accountId: string,
   containerId: string,
   workspaceId?: string
 ) {
-  // Resolve default workspace if not provided
   let wsId = workspaceId;
   if (!wsId) {
     const workspaces = await listGtmWorkspaces(accountId, containerId);
@@ -224,7 +401,6 @@ export async function auditGa4Setup(
   const recommendations: string[] = [];
   let score = 100;
 
-  // 1. Config tag presence
   if (!summary.hasGa4ConfigTag) {
     warnings.push("Aucun tag GA4 Configuration (googtag) trouvé");
     recommendations.push("Ajouter un tag Google Tag (GA4 Configuration) avec le bon Measurement ID");
@@ -235,21 +411,14 @@ export async function auditGa4Setup(
     score -= 10;
   }
 
-  // 2. Measurement IDs
   if (summary.measurementIds.length === 0) {
     warnings.push("Aucun Measurement ID (G-XXXXXXXX) détecté dans les tags");
     score -= 20;
   }
 
-  // 3. Event tags analysis
   const eventNames: string[] = [];
   for (const tag of summary.ga4EventTags) {
-    const eventNameParam = (tag.parameter || []).find(
-      (p: any) => p.key === "eventName"
-    );
-    if (eventNameParam?.value) {
-      eventNames.push(eventNameParam.value);
-    }
+    if (tag.eventName) eventNames.push(tag.eventName);
   }
 
   const missingRecommended = RECOMMENDED_EVENTS.filter(
@@ -262,12 +431,10 @@ export async function auditGa4Setup(
     score -= 15;
   }
 
-  // Soft penalty for missing recommended events
   if (missingRecommended.length > 5) {
     score -= 10;
   }
 
-  // 4. Basic firing trigger check (simplified)
   for (const tag of summary.ga4ConfigTags) {
     if (!tag.firingTriggerId || tag.firingTriggerId.length === 0) {
       warnings.push(`Le tag de configuration "${tag.name}" n'a aucun trigger de déclenchement`);
