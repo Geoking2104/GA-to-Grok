@@ -223,7 +223,7 @@ const coreAndBusinessTools: ToolDefinition[] = [
   {
     name: "analyze_ecommerce_data",
     description:
-      "Analyze real ecommerce performance from GA4: purchases, revenue, AOV, funnel conversion rates (view_item → add_to_cart → checkout → purchase), top items, daily trend, and data-quality warnings (zero-revenue purchases, missing purchase events, suspicious AOV…).",",
+      "Analyze real ecommerce performance from GA4: purchases, revenue, AOV, funnel conversion rates (view_item → add_to_cart → checkout → purchase), top items, daily trend, and data-quality warnings (zero-revenue purchases, missing purchase events, suspicious AOV…).",
     inputSchema: {
       type: "object",
       properties: {
