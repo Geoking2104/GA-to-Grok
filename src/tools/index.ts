@@ -9,6 +9,7 @@ import {
   getEcommerceAnalysis,
 } from "./business.js";
 import { gtmTools } from "./gtm.js";
+import { customEventTools } from "./custom-events.js";
 
 export interface ToolDefinition {
   name: string;
@@ -54,9 +55,7 @@ const coreAndBusinessTools: ToolDefinition[] = [
     description: "Get detailed information about a specific GA4 property.",
     inputSchema: {
       type: "object",
-      properties: {
-        propertyId: { type: "string" },
-      },
+      properties: { propertyId: { type: "string" } },
       required: ["propertyId"],
     },
     handler: async (args) => {
@@ -145,8 +144,6 @@ const coreAndBusinessTools: ToolDefinition[] = [
       }
     },
   },
-
-  // Business tools
   {
     name: "get_traffic_overview",
     description: "Complete traffic overview (users, sessions, pageviews, bounce rate…).",
@@ -223,26 +220,14 @@ const coreAndBusinessTools: ToolDefinition[] = [
   {
     name: "analyze_ecommerce_data",
     description:
-      "Analyze real ecommerce performance from GA4: purchases, revenue, AOV, funnel conversion rates (view_item → add_to_cart → checkout → purchase), top items, daily trend, and data-quality warnings (zero-revenue purchases, missing purchase events, suspicious AOV…).",
+      "Analyze real ecommerce performance from GA4: purchases, revenue, AOV, funnel conversion rates, top items, daily trend, and data-quality warnings.",
     inputSchema: {
       type: "object",
       properties: {
-        propertyId: {
-          type: "string",
-          description: "GA4 Property ID (required)",
-        },
-        startDate: {
-          type: "string",
-          description: "Default: 30daysAgo",
-        },
-        endDate: {
-          type: "string",
-          description: "Default: yesterday",
-        },
-        limit: {
-          type: "number",
-          description: "Max top items to return (default 20)",
-        },
+        propertyId: { type: "string" },
+        startDate: { type: "string" },
+        endDate: { type: "string" },
+        limit: { type: "number" },
       },
       required: ["propertyId"],
     },
@@ -253,6 +238,7 @@ const coreAndBusinessTools: ToolDefinition[] = [
 export const tools: ToolDefinition[] = [
   ...coreAndBusinessTools,
   ...gtmTools,
+  ...customEventTools,
 ];
 
 export async function handleToolCall(name: string, args: Record<string, any>) {
