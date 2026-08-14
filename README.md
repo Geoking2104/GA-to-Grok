@@ -2,42 +2,46 @@
 
 **Open-source Model Context Protocol (MCP) server** that connects **Google Analytics 4** to **Grok** (xAI).
 
-This connector allows Grok to query your GA4 properties directly through natural language (traffic, sources, pages, events, realtime, etc.).
+This connector allows Grok to query your GA4 properties directly through natural language.
 
 > Fully compatible with **Grok Connectors** (Custom MCP) and **Grok Build**.
 
 ## Features
 
-- ✅ **Service Account authentication** (GOOGLE_APPLICATION_CREDENTIALS or GOOGLE_CREDENTIALS_JSON)
-- ✅ **Core tools working**:
-  - `list_properties` — discover accessible GA4 properties
-  - `get_property_details`
-  - `get_metadata` — dimensions & metrics (including custom)
-  - `run_report` — flexible reporting with relative dates
-  - `run_realtime_report` — last 30 minutes data
-- MCP Server with STDIO (local) + HTTP mode skeleton
-- Docker support
+- ✅ **Service Account authentication**
+- ✅ **Core tools**: `list_properties`, `run_report`, `run_realtime_report`, `get_metadata`
+- ✅ **Business tools** (optimized for Grok):
+  - `get_traffic_overview`
+  - `get_top_pages`
+  - `get_acquisition`
+  - `get_devices`
+  - `get_events_summary`
+- ✅ **HTTP + SSE transport** ready for Grok Custom Connector
+- ✅ Docker support
 - 100% Open Source (**Apache-2.0**)
 
-## Current Status
+## Current Status (v0.2.0)
 
 - [x] Complete project structure
-- [x] TypeScript skeleton + MCP server base
-- [x] **Service Account authentication**
-- [x] **Core Google Analytics Data API + Admin API integration**
-- [x] Working tools: `list_properties`, `run_report`, `run_realtime_report`, `get_metadata`
-- [x] Docker + CI
-- [ ] Business tools (traffic overview, top pages, acquisition...)
-- [ ] Full production Streamable HTTP / SSE transport (required for remote Grok)
-- [ ] Better quota management & caching
+- [x] Service Account authentication
+- [x] Core Google Analytics Data API + Admin API
+- [x] Business tools
+- [x] SSE transport for remote Grok
+- [ ] Better multi-session SSE handling
+- [ ] Quota management & caching
+- [ ] Streamable HTTP (newer protocol)
 
-## Quick Start (Grok)
+## Quick Start for Grok
 
-1. Create a Google Cloud Service Account with **Viewer** access on your GA4 properties
-2. Deploy or run this server (see [docs/GROK_SETUP.md](docs/GROK_SETUP.md))
+1. Create a Google Cloud Service Account → give it **Viewer** access on your GA4 properties
+2. Run the server (see [docs/GROK_SETUP.md](docs/GROK_SETUP.md))
 3. Go to [grok.com/connectors](https://grok.com/connectors) → **New Connector → Custom**
-4. Paste your public MCP server URL
-5. Start asking Grok about your analytics
+4. Paste: `https://your-server.com/sse`
+5. Start asking Grok:
+
+   - "Give me a traffic overview for the last 7 days"
+   - "What are the top pages this month?"
+   - "Show acquisition by channel"
 
 ## Installation
 
@@ -48,23 +52,16 @@ npm install
 npm run build
 ```
 
-### Environment
-
 ```bash
 cp .env.example .env
-# Edit .env and set GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
-# Optionally set GA4_PROPERTY_ID=123456789
+# Set GOOGLE_APPLICATION_CREDENTIALS and optionally GA4_PROPERTY_ID
 ```
 
-### Local (STDIO)
-
 ```bash
+# Local
 npm run start:stdio
-```
 
-### Remote (HTTP – for Grok)
-
-```bash
+# For Grok (remote)
 npm run start:http
 ```
 
@@ -72,11 +69,16 @@ npm run start:http
 
 | Tool | Description |
 |------|-------------|
-| `list_properties` | List all accessible GA4 properties |
-| `get_property_details` | Details of a specific property |
-| `get_metadata` | Available dimensions & metrics |
-| `run_report` | Flexible report (metrics + dimensions + date range) |
-| `run_realtime_report` | Realtime data (last 30 min) |
+| `list_properties` | Discover accessible GA4 properties |
+| `get_property_details` | Details of one property |
+| `get_metadata` | Dimensions & metrics |
+| `run_report` | Flexible custom report |
+| `run_realtime_report` | Last 30 minutes |
+| **`get_traffic_overview`** | **Recommended** – full overview |
+| **`get_top_pages`** | Most viewed pages |
+| **`get_acquisition`** | Channels / sources / medium |
+| **`get_devices`** | Device / OS / browser |
+| **`get_events_summary`** | Top events |
 
 ## Documentation
 
