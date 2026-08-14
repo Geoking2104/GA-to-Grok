@@ -16,6 +16,7 @@ import {
   analyzeEventParameters,
   compareGtmVsGa4Events,
 } from "../google/gtm-ga4-bridge.js";
+import { auditGa4SetupV2 } from "../google/gtm-audit-v2.js";
 
 function success(data: any) {
   return {
@@ -165,27 +166,20 @@ export const gtmTools = [
   {
     name: "audit_ga4_setup",
     description:
-      "Perform an intelligent audit of the GA4 setup inside a GTM container. Returns a score, warnings, missing recommended events and actionable recommendations.",
+      "Basic audit of the GA4 setup inside a GTM container (Phase 1). Prefer audit_ga4_setup_v2 for a complete analysis.",
     inputSchema: {
       type: "object",
       properties: {
         accountId: { type: "string" },
         containerId: { type: "string" },
-        workspaceId: {
-          type: "string",
-          description: "Optional. Defaults to the Default Workspace.",
-        },
+        workspaceId: { type: "string" },
       },
       required: ["accountId", "containerId"],
     },
     handler: async (args: any) => {
       try {
         return success(
-          await auditGa4Setup(
-            args.accountId,
-            args.containerId,
-            args.workspaceId
-          )
+          await auditGa4Setup(args.accountId, args.containerId, args.workspaceId)
         );
       } catch (err: any) {
         return error(err.message || "Failed to audit GA4 setup");
@@ -227,7 +221,7 @@ export const gtmTools = [
         accountId: { type: "string" },
         containerId: { type: "string" },
         workspaceId: { type: "string" },
-        triggerId: { type: "string", description: "The trigger ID to inspect" },
+        triggerId: { type: "string" },
       },
       required: ["accountId", "containerId", "workspaceId", "triggerId"],
     },
@@ -278,7 +272,7 @@ export const gtmTools = [
         accountId: { type: "string" },
         containerId: { type: "string" },
         workspaceId: { type: "string" },
-        variableId: { type: "string", description: "The variable ID to inspect" },
+        variableId: { type: "string" },
       },
       required: ["accountId", "containerId", "workspaceId", "variableId"],
     },
@@ -300,14 +294,14 @@ export const gtmTools = [
   {
     name: "get_tag_details",
     description:
-      "Get full enriched details of a specific GTM tag: parameters, eventName, Measurement IDs, and resolved firing/blocking trigger names. Essential for debugging GA4 event tags.",
+      "Get full enriched details of a specific GTM tag: parameters, eventName, Measurement IDs, and resolved firing/blocking trigger names.",
     inputSchema: {
       type: "object",
       properties: {
         accountId: { type: "string" },
         containerId: { type: "string" },
         workspaceId: { type: "string" },
-        tagId: { type: "string", description: "The tag ID to inspect" },
+        tagId: { type: "string" },
       },
       required: ["accountId", "containerId", "workspaceId", "tagId"],
     },
@@ -358,25 +352,16 @@ export const gtmTools = [
   {
     name: "compare_gtm_vs_ga4_events",
     description:
-      "Cross-reference events configured in GTM with events actually received in a GA4 property. Shows what is configured but never seen, what is received but not configured in GTM, and the match rate. Requires both GTM and GA4 access.",
+      "Cross-reference events configured in GTM with events actually received in a GA4 property. Shows match rate and discrepancies.",
     inputSchema: {
       type: "object",
       properties: {
-        accountId: { type: "string", description: "GTM Account ID" },
-        containerId: { type: "string", description: "GTM Container ID" },
-        workspaceId: { type: "string", description: "GTM Workspace ID" },
-        propertyId: {
-          type: "string",
-          description: "GA4 Property ID (e.g. 123456789)",
-        },
-        startDate: {
-          type: "string",
-          description: "Start date for GA4 lookup (default: 30daysAgo)",
-        },
-        endDate: {
-          type: "string",
-          description: "End date for GA4 lookup (default: yesterday)",
-        },
+        accountId: { type: "string" },
+        containerId: { type: "string" },
+        workspaceId: { type: "string" },
+        propertyId: { type: "string", description: "GA4 Property ID" },
+        startDate: { type: "string", description: "Default: 30daysAgo" },
+        endDate: { type: "string", description: "Default: yesterday" },
       },
       required: ["accountId", "containerId", "workspaceId", "propertyId"],
     },
@@ -394,6 +379,54 @@ export const gtmTools = [
         );
       } catch (err: any) {
         return error(err.message || "Failed to compare GTM vs GA4 events");
+      }
+    },
+  },
+
+  // ─── Phase 2 — Full Audit V2 ────────────────────────────────
+  {
+    name: "audit_ga4_setup_v2",
+    description:
+      "Full intelligent audit of a GTM container for GA4 quality. Combines configuration checks, parameter quality, trigger validation, and optionally real GA4 data comparison. Returns a score (0-100), grade (A-F), severity-ranked issues and actionable recommendations. Provide propertyId to enable live data cross-check.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        accountId: { type: "string", description: "GTM Account ID" },
+        containerId: { type: "string", description: "GTM Container ID" },
+        workspaceId: {
+          type: "string",
+          description: "Optional. Defaults to Default Workspace",
+        },
+        propertyId: {
+          type: "string",
+          description:
+            "Optional GA4 Property ID. When provided, the audit also compares configured vs received events.",
+        },
+        startDate: {
+          type: "string",
+          description: "Used only when propertyId is set. Default: 30daysAgo",
+        },
+        endDate: {
+          type: "string",
+          description: "Used only when propertyId is set. Default: yesterday",
+        },
+      },
+      required: ["accountId", "containerId"],
+    },
+    handler: async (args: any) => {
+      try {
+        return success(
+          await auditGa4SetupV2({
+            accountId: args.accountId,
+            containerId: args.containerId,
+            workspaceId: args.workspaceId,
+            propertyId: args.propertyId,
+            startDate: args.startDate,
+            endDate: args.endDate,
+          })
+        );
+      } catch (err: any) {
+        return error(err.message || "Failed to run audit v2");
       }
     },
   },
