@@ -12,6 +12,10 @@ import {
   getVariableDetails,
   getTagDetails,
 } from "../google/tagmanager-api.js";
+import {
+  analyzeEventParameters,
+  compareGtmVsGa4Events,
+} from "../google/gtm-ga4-bridge.js";
 
 function success(data: any) {
   return {
@@ -189,7 +193,7 @@ export const gtmTools = [
     },
   },
 
-  // ─── Phase 2 (GTM-09 → GTM-13) ──────────────────────────────
+  // ─── Phase 2 — Triggers & Variables ─────────────────────────
   {
     name: "list_gtm_triggers",
     description:
@@ -319,6 +323,77 @@ export const gtmTools = [
         );
       } catch (err: any) {
         return error(err.message || "Failed to get tag details");
+      }
+    },
+  },
+
+  // ─── Phase 2 — GA4 data integration ─────────────────────────
+  {
+    name: "analyze_event_parameters",
+    description:
+      "Analyze all GA4 Event tags and check whether critical parameters (value, currency, transaction_id, etc.) are present. Extremely useful for ecommerce tracking quality.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        accountId: { type: "string" },
+        containerId: { type: "string" },
+        workspaceId: { type: "string" },
+      },
+      required: ["accountId", "containerId", "workspaceId"],
+    },
+    handler: async (args: any) => {
+      try {
+        return success(
+          await analyzeEventParameters(
+            args.accountId,
+            args.containerId,
+            args.workspaceId
+          )
+        );
+      } catch (err: any) {
+        return error(err.message || "Failed to analyze event parameters");
+      }
+    },
+  },
+  {
+    name: "compare_gtm_vs_ga4_events",
+    description:
+      "Cross-reference events configured in GTM with events actually received in a GA4 property. Shows what is configured but never seen, what is received but not configured in GTM, and the match rate. Requires both GTM and GA4 access.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        accountId: { type: "string", description: "GTM Account ID" },
+        containerId: { type: "string", description: "GTM Container ID" },
+        workspaceId: { type: "string", description: "GTM Workspace ID" },
+        propertyId: {
+          type: "string",
+          description: "GA4 Property ID (e.g. 123456789)",
+        },
+        startDate: {
+          type: "string",
+          description: "Start date for GA4 lookup (default: 30daysAgo)",
+        },
+        endDate: {
+          type: "string",
+          description: "End date for GA4 lookup (default: yesterday)",
+        },
+      },
+      required: ["accountId", "containerId", "workspaceId", "propertyId"],
+    },
+    handler: async (args: any) => {
+      try {
+        return success(
+          await compareGtmVsGa4Events({
+            accountId: args.accountId,
+            containerId: args.containerId,
+            workspaceId: args.workspaceId,
+            propertyId: args.propertyId,
+            startDate: args.startDate,
+            endDate: args.endDate,
+          })
+        );
+      } catch (err: any) {
+        return error(err.message || "Failed to compare GTM vs GA4 events");
       }
     },
   },
