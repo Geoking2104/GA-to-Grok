@@ -1,5 +1,6 @@
 import { runReport } from "../google/data-api.js";
 import { normalizeDate } from "../utils/dates.js";
+import { analyzeEcommerceData } from "../google/ecommerce-data.js";
 
 function success(data: any) {
   return {
@@ -21,7 +22,6 @@ function error(message: string) {
 
 /**
  * High-level business tools optimized for Grok / agents.
- * They call the underlying runReport with sensible defaults.
  */
 
 export async function getTrafficOverview(args: {
@@ -50,7 +50,6 @@ export async function getTrafficOverview(args: {
       limit: 90,
     });
 
-    // Also compute totals
     const totals = await runReport({
       propertyId: args.propertyId,
       metrics: [
@@ -191,5 +190,28 @@ export async function getEventsSummary(args: {
     });
   } catch (err: any) {
     return error(err.message);
+  }
+}
+
+/** Analyze real ecommerce performance & data quality from GA4 */
+export async function getEcommerceAnalysis(args: {
+  propertyId: string;
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+}) {
+  try {
+    if (!args.propertyId) {
+      return error("propertyId is required");
+    }
+    const result = await analyzeEcommerceData({
+      propertyId: args.propertyId,
+      startDate: args.startDate ? normalizeDate(args.startDate) : undefined,
+      endDate: args.endDate ? normalizeDate(args.endDate) : undefined,
+      limit: args.limit,
+    });
+    return success(result);
+  } catch (err: any) {
+    return error(err.message || "Failed to analyze ecommerce data");
   }
 }

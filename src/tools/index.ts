@@ -6,6 +6,7 @@ import {
   getAcquisition,
   getDevices,
   getEventsSummary,
+  getEcommerceAnalysis,
 } from "./business.js";
 import { gtmTools } from "./gtm.js";
 
@@ -35,11 +36,10 @@ function error(message: string) {
 }
 
 const coreAndBusinessTools: ToolDefinition[] = [
-  // ─── Discovery ───────────────────────────────────────────────
   {
     name: "list_properties",
     description:
-      "List all Google Analytics 4 properties accessible with the current Service Account credentials. Always call this first if you don't know the Property ID.",
+      "List all Google Analytics 4 properties accessible with the current Service Account credentials.",
     inputSchema: { type: "object", properties: {}, required: [] },
     handler: async () => {
       try {
@@ -55,7 +55,7 @@ const coreAndBusinessTools: ToolDefinition[] = [
     inputSchema: {
       type: "object",
       properties: {
-        propertyId: { type: "string", description: "GA4 Property ID (e.g. 123456789)" },
+        propertyId: { type: "string" },
       },
       required: ["propertyId"],
     },
@@ -69,16 +69,10 @@ const coreAndBusinessTools: ToolDefinition[] = [
   },
   {
     name: "get_metadata",
-    description:
-      "Retrieve all available dimensions and metrics (including custom ones) for a GA4 property.",
+    description: "Retrieve available dimensions and metrics for a GA4 property.",
     inputSchema: {
       type: "object",
-      properties: {
-        propertyId: {
-          type: "string",
-          description: "GA4 Property ID. Optional if GA4_PROPERTY_ID is set.",
-        },
-      },
+      properties: { propertyId: { type: "string" } },
       required: [],
     },
     handler: async (args) => {
@@ -89,35 +83,18 @@ const coreAndBusinessTools: ToolDefinition[] = [
       }
     },
   },
-
-  // ─── Core flexible report ────────────────────────────────────
   {
     name: "run_report",
-    description:
-      "Run a flexible GA4 report. Provide metrics, dimensions and date ranges. Prefer the business tools when possible.",
+    description: "Run a flexible GA4 report. Prefer business tools when possible.",
     inputSchema: {
       type: "object",
       properties: {
         propertyId: { type: "string" },
-        metrics: {
-          type: "array",
-          items: { type: "string" },
-          description: "e.g. ['activeUsers', 'sessions', 'screenPageViews']",
-        },
-        dimensions: {
-          type: "array",
-          items: { type: "string" },
-          description: "e.g. ['date', 'sessionDefaultChannelGroup', 'pagePath']",
-        },
-        startDate: {
-          type: "string",
-          description: "YYYY-MM-DD or relative (7daysAgo, yesterday, 30daysAgo)",
-        },
-        endDate: {
-          type: "string",
-          description: "YYYY-MM-DD or relative (yesterday, today)",
-        },
-        limit: { type: "number", description: "Max rows (default 100)" },
+        metrics: { type: "array", items: { type: "string" } },
+        dimensions: { type: "array", items: { type: "string" } },
+        startDate: { type: "string" },
+        endDate: { type: "string" },
+        limit: { type: "number" },
       },
       required: ["metrics", "startDate", "endDate"],
     },
@@ -146,15 +123,8 @@ const coreAndBusinessTools: ToolDefinition[] = [
       type: "object",
       properties: {
         propertyId: { type: "string" },
-        metrics: {
-          type: "array",
-          items: { type: "string" },
-          description: "e.g. ['activeUsers', 'eventCount']",
-        },
-        dimensions: {
-          type: "array",
-          items: { type: "string" },
-        },
+        metrics: { type: "array", items: { type: "string" } },
+        dimensions: { type: "array", items: { type: "string" } },
         limit: { type: "number" },
       },
       required: ["metrics"],
@@ -176,17 +146,16 @@ const coreAndBusinessTools: ToolDefinition[] = [
     },
   },
 
-  // ─── Business tools (recommended for Grok) ───────────────────
+  // Business tools
   {
     name: "get_traffic_overview",
-    description:
-      "Get a complete traffic overview (users, sessions, pageviews, bounce rate, new users) for a period. Best starting point for most questions.",
+    description: "Complete traffic overview (users, sessions, pageviews, bounce rate…).",
     inputSchema: {
       type: "object",
       properties: {
         propertyId: { type: "string" },
-        startDate: { type: "string", description: "Default: 7daysAgo" },
-        endDate: { type: "string", description: "Default: yesterday" },
+        startDate: { type: "string" },
+        endDate: { type: "string" },
       },
       required: [],
     },
@@ -194,14 +163,14 @@ const coreAndBusinessTools: ToolDefinition[] = [
   },
   {
     name: "get_top_pages",
-    description: "Get the most viewed pages for a period.",
+    description: "Most viewed pages for a period.",
     inputSchema: {
       type: "object",
       properties: {
         propertyId: { type: "string" },
         startDate: { type: "string" },
         endDate: { type: "string" },
-        limit: { type: "number", description: "Default 20" },
+        limit: { type: "number" },
       },
       required: [],
     },
@@ -209,14 +178,14 @@ const coreAndBusinessTools: ToolDefinition[] = [
   },
   {
     name: "get_acquisition",
-    description: "Get traffic acquisition by channel, source and medium.",
+    description: "Traffic acquisition by channel, source and medium.",
     inputSchema: {
       type: "object",
       properties: {
         propertyId: { type: "string" },
         startDate: { type: "string" },
         endDate: { type: "string" },
-        limit: { type: "number", description: "Default 15" },
+        limit: { type: "number" },
       },
       required: [],
     },
@@ -224,7 +193,7 @@ const coreAndBusinessTools: ToolDefinition[] = [
   },
   {
     name: "get_devices",
-    description: "Get traffic breakdown by device category, OS and browser.",
+    description: "Traffic breakdown by device, OS and browser.",
     inputSchema: {
       type: "object",
       properties: {
@@ -238,18 +207,46 @@ const coreAndBusinessTools: ToolDefinition[] = [
   },
   {
     name: "get_events_summary",
-    description: "Get the most frequent events for a period.",
+    description: "Most frequent events for a period.",
     inputSchema: {
       type: "object",
       properties: {
         propertyId: { type: "string" },
         startDate: { type: "string" },
         endDate: { type: "string" },
-        limit: { type: "number", description: "Default 20" },
+        limit: { type: "number" },
       },
       required: [],
     },
     handler: getEventsSummary,
+  },
+  {
+    name: "analyze_ecommerce_data",
+    description:
+      "Analyze real ecommerce performance from GA4: purchases, revenue, AOV, funnel conversion rates (view_item → add_to_cart → checkout → purchase), top items, daily trend, and data-quality warnings (zero-revenue purchases, missing purchase events, suspicious AOV…).",",
+    inputSchema: {
+      type: "object",
+      properties: {
+        propertyId: {
+          type: "string",
+          description: "GA4 Property ID (required)",
+        },
+        startDate: {
+          type: "string",
+          description: "Default: 30daysAgo",
+        },
+        endDate: {
+          type: "string",
+          description: "Default: yesterday",
+        },
+        limit: {
+          type: "number",
+          description: "Max top items to return (default 20)",
+        },
+      },
+      required: ["propertyId"],
+    },
+    handler: getEcommerceAnalysis,
   },
 ];
 
