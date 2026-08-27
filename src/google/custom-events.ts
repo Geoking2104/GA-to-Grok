@@ -79,8 +79,8 @@ export async function listCustomEvents(params: {
     };
   });
 
-  const custom = events.filter((e) => e.category === "custom");
-  const standard = events.filter((e) => e.category === "standard_or_recommended");
+  const custom = events.filter((e: any) => e.category === "custom");
+  const standard = events.filter((e: any) => e.category === "standard_or_recommended");
 
   return {
     meta: { propertyId, period: { startDate, endDate } },

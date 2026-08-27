@@ -337,8 +337,10 @@ export async function getGtmContainerSummary(
   containerId: string,
   workspaceId?: string
 ) {
-  let wsId = workspaceId;
-  if (!wsId) {
+  let wsId: string;
+  if (workspaceId) {
+    wsId = workspaceId;
+  } else {
     const workspaces = await listGtmWorkspaces(accountId, containerId);
     const defaultWs =
       workspaces.workspaces.find((w: any) => w.name === "Default Workspace") ||

@@ -93,7 +93,7 @@ export async function cutoverChecklist(params: {
       id: "sgtm_score",
       category: "server",
       title: "Audit sGTM score ≥ 70",
-      status: sAudit.score >= 70 ? "pass" : sAudit.score >= 50 ? "warn" : "fail",
+      status: (sAudit.score ?? 0) >= 70 ? "pass" : (sAudit.score ?? 0) >= 50 ? "warn" : "fail",
       detail: `score=${sAudit.score}, grade=${sAudit.grade}`,
       required: true,
     });

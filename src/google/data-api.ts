@@ -84,7 +84,7 @@ export async function runRealtimeReport(params: {
     requestBody: {
       metrics: params.metrics.map((name) => ({ name })),
       dimensions: (params.dimensions || []).map((name) => ({ name })),
-      limit: params.limit ?? 50,
+      limit: params.limit != null ? String(params.limit) : "50",
     },
   });
 

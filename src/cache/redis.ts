@@ -1,4 +1,4 @@
-import Redis from "ioredis";
+import { Redis } from "ioredis";
 
 let redis: Redis | null = null;
 let isConnected = false;
@@ -26,7 +26,7 @@ export function initRedis(): void {
       console.error("[cache] Redis connected");
     });
 
-    redis.on("error", (err) => {
+    redis.on("error", (err: any) => {
       isConnected = false;
       console.error("[cache] Redis error:", err.message);
     });
@@ -37,7 +37,7 @@ export function initRedis(): void {
     });
 
     // Connect in background
-    redis.connect().catch((err) => {
+    redis.connect().catch((err: any) => {
       console.error("[cache] Failed to connect to Redis:", err.message);
       redis = null;
     });
