@@ -9,13 +9,16 @@
 # Optional:
 #   GA4_PROPERTY_ID
 #   REDIS_URL
-#   GA4_WRITE_ENABLED / GTM_WRITE_ENABLED  (default writes allowed unless false)
+#   GA4_WRITE_ENABLED / GTM_WRITE_ENABLED  (default writes DISABLED unless set to "true")
+#
+# Hosted/deployed option: point Grok Connectors or the Remote MCP Tools API at the
+# public HTTPS URL (https://<host>/mcp) with header: Authorization: Bearer <MCP_API_TOKEN>.
 
 [mcp_servers.ga-to-grok]
 command = "node"
 args = ["dist/index.js", "--transport", "stdio"]
 startup_timeout_sec = 45
-tool_timeout_sec = 120
+tool_timeout_sec = 600
 env = {
   GOOGLE_APPLICATION_CREDENTIALS = "${GOOGLE_APPLICATION_CREDENTIALS}",
   GOOGLE_CREDENTIALS_JSON = "${GOOGLE_CREDENTIALS_JSON}",

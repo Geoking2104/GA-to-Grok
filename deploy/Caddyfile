@@ -1,0 +1,11 @@
+{
+	# ACME account email (used for Let's Encrypt cert issuance/renewal).
+	email {$CADDY_EMAIL}
+}
+
+# SITE_ADDRESS must be a real domain with an A/AAAA record pointing at this VPS.
+# Caddy obtains and auto-renews a publicly-trusted TLS certificate for it.
+{$SITE_ADDRESS} {
+	# MCP Streamable HTTP endpoint (and legacy /sse). Caddy streams SSE/HTTP responses.
+	reverse_proxy app:3000
+}
