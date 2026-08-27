@@ -1,4 +1,5 @@
 import { Redis } from "ioredis";
+import { logger } from "../utils/logger.js";
 
 let redis: Redis | null = null;
 let isConnected = false;
@@ -10,7 +11,7 @@ let isConnected = false;
 export function initRedis(): void {
   const url = process.env.REDIS_URL;
   if (!url) {
-    console.error("[cache] REDIS_URL not set — caching disabled");
+    logger.info("[cache] REDIS_URL not set — caching disabled");
     return;
   }
 
@@ -23,26 +24,26 @@ export function initRedis(): void {
 
     redis.on("connect", () => {
       isConnected = true;
-      console.error("[cache] Redis connected");
+      logger.info("[cache] Redis connected");
     });
 
     redis.on("error", (err: any) => {
       isConnected = false;
-      console.error("[cache] Redis error:", err.message);
+      logger.info("[cache] Redis error:", err.message);
     });
 
     redis.on("close", () => {
       isConnected = false;
-      console.error("[cache] Redis connection closed");
+      logger.info("[cache] Redis connection closed");
     });
 
     // Connect in background
     redis.connect().catch((err: any) => {
-      console.error("[cache] Failed to connect to Redis:", err.message);
+      logger.info("[cache] Failed to connect to Redis:", err.message);
       redis = null;
     });
   } catch (err: any) {
-    console.error("[cache] Redis init failed:", err.message);
+    logger.info("[cache] Redis init failed:", err.message);
     redis = null;
   }
 }
@@ -79,7 +80,7 @@ export async function cacheGet<T = any>(key: string): Promise<T | null> {
     if (!raw) return null;
     return JSON.parse(raw) as T;
   } catch (err: any) {
-    console.error("[cache] GET error:", err.message);
+    logger.info("[cache] GET error:", err.message);
     return null;
   }
 }
@@ -97,7 +98,7 @@ export async function cacheSet(
   try {
     await redis.set(key, JSON.stringify(value), "EX", ttlSeconds);
   } catch (err: any) {
-    console.error("[cache] SET error:", err.message);
+    logger.info("[cache] SET error:", err.message);
   }
 }
 
@@ -113,7 +114,7 @@ export async function cacheDelPattern(pattern: string): Promise<void> {
       await redis.del(...keys);
     }
   } catch (err: any) {
-    console.error("[cache] DEL pattern error:", err.message);
+    logger.info("[cache] DEL pattern error:", err.message);
   }
 }
 

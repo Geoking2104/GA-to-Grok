@@ -1,0 +1,38 @@
+feat: zod input validation, error enrichment, retry/pagination, LOG_LEVEL
+
+Implements the remaining hardening items for GA-to-Grok:
+
+#1 Runtime input validation
+- Every tool now carries a zod schema (`schema`) instead of a hand-written
+  JSON schema; `handleToolCall` validates args and returns a clear
+  "Invalid arguments for <tool>: ..." error. Schemas are strict (unknown
+  keys rejected) to catch typos like `enddate`. The MCP `inputSchema`
+  advertised to clients is derived via `zodToJsonSchema`.
+- Shared `src/tools/response.ts` (`success`/`fail`) and `src/tools/schema.ts`
+  (common id fragments + `strict()`) replace per-file duplicates.
+
+#2 Pagination + retry/quota
+- `data-api.runReport` now paginates via `offset` (GA4 100k/page cap) so
+  large properties are no longer silently truncated at `limit`.
+- Added a global gaxios `retryConfig` (429 + 5xx, 4 retries) in
+  `google/client.ts`. Also dropped the `auth as any` cast there.
+
+#3 Error enrichment
+- New `src/utils/error.ts` (`formatError`) surfaces Google/Gaxios
+  `status` + `errors[].reason` so the agent can react; `fail()` uses it.
+  All tool catches now call `fail(err)` instead of `error(err.message)`.
+
+#6 LOG_LEVEL
+- New `src/utils/logger.ts` respects `LOG_LEVEL` (debug/info/warn/error);
+  wired into `cache/redis.ts` and `server.ts` (still stderr-safe for stdio).
+
+#5 Tests
+- Added `tests/tools.test.ts`: schema enforcement, typo rejection,
+  `handleToolCall` validation, `formatReportResponse`, and error enrichment.
+  (19 tests total now pass.)
+
+#4 Type-safety debt (partial): removed `as any` in client.ts and the
+per-tool `any` schemas; lint `no-explicit-any` warnings reduced 260 → 212.
+Remaining `any` is incremental follow-up.
+
+Build, lint (0 errors) and tests stay green.

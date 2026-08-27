@@ -1,24 +1,7 @@
 import { runReport } from "../google/data-api.js";
 import { normalizeDate } from "../utils/dates.js";
 import { analyzeEcommerceData } from "../google/ecommerce-data.js";
-
-function success(data: any) {
-  return {
-    content: [
-      {
-        type: "text" as const,
-        text: typeof data === "string" ? data : JSON.stringify(data, null, 2),
-      },
-    ],
-  };
-}
-
-function error(message: string) {
-  return {
-    content: [{ type: "text" as const, text: `Error: ${message}` }],
-    isError: true,
-  };
-}
+import { success, fail } from "./response.js";
 
 /**
  * High-level business tools optimized for Grok / agents.
@@ -71,7 +54,7 @@ export async function getTrafficOverview(args: {
       daily: result.rows,
     });
   } catch (err: any) {
-    return error(err.message);
+    return fail(err);
   }
 }
 
@@ -101,7 +84,7 @@ export async function getTopPages(args: {
       topPages: result.rows,
     });
   } catch (err: any) {
-    return error(err.message);
+    return fail(err);
   }
 }
 
@@ -131,7 +114,7 @@ export async function getAcquisition(args: {
       acquisition: result.rows,
     });
   } catch (err: any) {
-    return error(err.message);
+    return fail(err);
   }
 }
 
@@ -159,7 +142,7 @@ export async function getDevices(args: {
       devices: result.rows,
     });
   } catch (err: any) {
-    return error(err.message);
+    return fail(err);
   }
 }
 
@@ -189,7 +172,7 @@ export async function getEventsSummary(args: {
       events: result.rows,
     });
   } catch (err: any) {
-    return error(err.message);
+    return fail(err);
   }
 }
 
@@ -202,7 +185,7 @@ export async function getEcommerceAnalysis(args: {
 }) {
   try {
     if (!args.propertyId) {
-      return error("propertyId is required");
+      return fail("propertyId is required");
     }
     const result = await analyzeEcommerceData({
       propertyId: args.propertyId,
@@ -212,6 +195,6 @@ export async function getEcommerceAnalysis(args: {
     });
     return success(result);
   } catch (err: any) {
-    return error(err.message || "Failed to analyze ecommerce data");
+    return fail(err);
   }
 }

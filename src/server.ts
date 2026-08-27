@@ -3,6 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { zodToJsonSchema } from "zod-to-json-schema";
 import { tools, handleToolCall } from "./tools/index.js";
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
@@ -10,6 +11,7 @@ import { randomUUID } from "crypto";
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+import { logger } from "./utils/logger.js";
 
 function getVersion(): string {
   try {
@@ -41,7 +43,7 @@ function createMcpServer() {
       tools: tools.map((t) => ({
         name: t.name,
         description: t.description,
-        inputSchema: t.inputSchema,
+        inputSchema: zodToJsonSchema(t.schema),
       })),
     };
   });
@@ -76,7 +78,7 @@ export async function startServer(transportType: "stdio" | "http" = "stdio") {
   if (transportType === "stdio") {
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    console.error("GA-to-Grok MCP server running on STDIO");
+    logger.info("GA-to-Grok MCP server running on STDIO");
     return;
   }
 
@@ -126,7 +128,7 @@ export async function startServer(transportType: "stdio" | "http" = "stdio") {
       await sessionServer.connect(transport);
       await transport.handleRequest(req, res, req.body);
     } catch (err: any) {
-      console.error("[mcp] Error handling request:", err?.message);
+      logger.info("[mcp] Error handling request:", err?.message);
       if (!res.headersSent) {
         res.status(500).json({ error: err?.message || "Internal error" });
       }
@@ -144,7 +146,7 @@ export async function startServer(transportType: "stdio" | "http" = "stdio") {
   // ── Legacy: SSE transport at /sse (kept for older clients) ──────────
   app.get("/sse", requireToken, async (req: Request, res: Response) => {
     const sessionId = randomUUID();
-    console.error(`[sse] New connection → session ${sessionId} from ${req.ip}`);
+    logger.info(`[sse] New connection → session ${sessionId} from ${req.ip}`);
 
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
@@ -156,16 +158,16 @@ export async function startServer(transportType: "stdio" | "http" = "stdio") {
 
     const cleanup = () => {
       sessions.delete(sessionId);
-      console.error(`[sse] Session ${sessionId} closed (active: ${sessions.size})`);
+      logger.info(`[sse] Session ${sessionId} closed (active: ${sessions.size})`);
     };
     res.on("close", cleanup);
     res.on("error", cleanup);
 
     try {
       await server.connect(transport);
-      console.error(`[sse] Session ${sessionId} connected (active: ${sessions.size})`);
+      logger.info(`[sse] Session ${sessionId} connected (active: ${sessions.size})`);
     } catch (err: any) {
-      console.error(`[sse] Failed to connect session ${sessionId}:`, err?.message);
+      logger.info(`[sse] Failed to connect session ${sessionId}:`, err?.message);
       sessions.delete(sessionId);
       if (!res.headersSent) {
         res.status(500).end();
@@ -185,7 +187,7 @@ export async function startServer(transportType: "stdio" | "http" = "stdio") {
           await first.handlePostMessage(req, res);
           return;
         } catch (err: any) {
-          console.error("[messages] Error handling message (fallback):", err?.message);
+          logger.info("[messages] Error handling message (fallback):", err?.message);
           return res.status(500).json({ error: err?.message });
         }
       }
@@ -200,7 +202,7 @@ export async function startServer(transportType: "stdio" | "http" = "stdio") {
     try {
       await transport.handlePostMessage(req, res);
     } catch (err: any) {
-      console.error(`[messages] Error for session ${sessionId}:`, err?.message);
+      logger.info(`[messages] Error for session ${sessionId}:`, err?.message);
       if (!res.headersSent) {
         res.status(500).json({ error: err?.message });
       }
@@ -209,15 +211,15 @@ export async function startServer(transportType: "stdio" | "http" = "stdio") {
 
   // Graceful shutdown
   const httpServer = app.listen(port, host, () => {
-    console.error(`GA-to-Grok MCP server running on http://${host}:${port}`);
-    console.error(`Streamable HTTP endpoint → http://${host}:${port}/mcp`);
-    console.error(`SSE endpoint (legacy)    → http://${host}:${port}/sse`);
-    console.error(`Messages endpoint        → http://${host}:${port}/messages`);
-    console.error(`Ready for Grok Custom Connector`);
+    logger.info(`GA-to-Grok MCP server running on http://${host}:${port}`);
+    logger.info(`Streamable HTTP endpoint → http://${host}:${port}/mcp`);
+    logger.info(`SSE endpoint (legacy)    → http://${host}:${port}/sse`);
+    logger.info(`Messages endpoint        → http://${host}:${port}/messages`);
+    logger.info(`Ready for Grok Custom Connector`);
   });
 
   const shutdown = () => {
-    console.error("[server] Shutting down...");
+    logger.info("[server] Shutting down...");
     sessions.clear();
     httpServer.close(() => process.exit(0));
     // Hard timeout if connections never drain.

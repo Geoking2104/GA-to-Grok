@@ -55,23 +55,24 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
-    "googleapis": "^144.0.0",
-    "google-auth-library": "^9.14.0",
-    "zod": "^3.23.8",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.2",
-    "cors": "^2.8.5",
-    "ioredis": "^5.4.2"
+    "google-auth-library": "^9.14.0",
+    "googleapis": "^144.0.0",
+    "ioredis": "^5.4.2",
+    "zod": "^3.23.8",
+    "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {
-    "@types/node": "^22.10.0",
-    "@types/express": "^5.0.0",
     "@types/cors": "^2.8.17",
-    "typescript": "^5.7.2",
-    "tsx": "^4.19.2",
-    "vitest": "^2.1.8",
-    "eslint": "^9.16.0",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.0",
     "@typescript-eslint/eslint-plugin": "^8.18.0",
-    "@typescript-eslint/parser": "^8.18.0"
+    "@typescript-eslint/parser": "^8.18.0",
+    "eslint": "^9.16.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   }
 }

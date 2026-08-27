@@ -9,6 +9,7 @@ export interface RunReportParams {
   startDate: string;
   endDate: string;
   limit?: number;
+  offset?: number;
   dimensionFilter?: any;
   metricFilter?: any;
   orderBys?: any[];
@@ -17,38 +18,63 @@ export interface RunReportParams {
 
 export async function runReport(params: RunReportParams) {
   const propertyId = resolvePropertyId(params.propertyId);
+  const limit = params.limit ?? 100;
+  const pageSize = Math.min(limit, 100000);
+  let offset = params.offset ?? 0;
+  const allRows: any[] = [];
+  let firstPage: ReturnType<typeof formatReportResponse> | null = null;
 
-  // Build cache key
-  const key = cacheKey("report", {
-    propertyId,
-    metrics: params.metrics,
-    dimensions: params.dimensions || [],
-    startDate: params.startDate,
-    endDate: params.endDate,
-    limit: params.limit ?? 100,
-    dimensionFilter: params.dimensionFilter,
-    metricFilter: params.metricFilter,
-    orderBys: params.orderBys,
-  });
+  // Follow offset-based pagination so large properties are not silently
+  // truncated at the GA4 per-request row cap.
+  for (;;) {
+    const key = cacheKey("report", {
+      propertyId,
+      metrics: params.metrics,
+      dimensions: params.dimensions || [],
+      startDate: params.startDate,
+      endDate: params.endDate,
+      limit,
+      offset,
+      dimensionFilter: params.dimensionFilter,
+      metricFilter: params.metricFilter,
+      orderBys: params.orderBys,
+    });
 
-  // Try cache first
-  const cached = await cacheGet(key);
-  if (cached) {
-    return { ...cached, _cached: true };
+    const cached = await cacheGet(key);
+    const formatted = cached
+      ? (cached as ReturnType<typeof formatReportResponse>)
+      : await fetchReportPage(propertyId, params, pageSize, offset);
+
+    if (!firstPage) firstPage = formatted;
+    allRows.push(...(formatted.rows || []));
+
+    if (allRows.length >= limit || (formatted.rows?.length ?? 0) < pageSize) {
+      break;
+    }
+    offset += pageSize;
   }
 
+  return {
+    ...firstPage!,
+    rows: allRows,
+    rowCount: allRows.length,
+  };
+}
+
+async function fetchReportPage(
+  propertyId: string,
+  params: RunReportParams,
+  pageSize: number,
+  offset: number
+) {
   const client = await getDataClient();
 
   const request: any = {
-    dateRanges: [
-      {
-        startDate: params.startDate,
-        endDate: params.endDate,
-      },
-    ],
+    dateRanges: [{ startDate: params.startDate, endDate: params.endDate }],
     metrics: params.metrics.map((name) => ({ name })),
     dimensions: (params.dimensions || []).map((name) => ({ name })),
-    limit: params.limit ?? 100,
+    limit: pageSize,
+    offset,
     keepEmptyRows: params.keepEmptyRows ?? false,
   };
 
@@ -62,10 +88,22 @@ export async function runReport(params: RunReportParams) {
   });
 
   const formatted = formatReportResponse(response.data);
-
-  // Store in cache
-  await cacheSet(key, formatted, TTL.report);
-
+  await cacheSet(
+    cacheKey("report", {
+      propertyId,
+      metrics: params.metrics,
+      dimensions: params.dimensions || [],
+      startDate: params.startDate,
+      endDate: params.endDate,
+      limit: params.limit ?? 100,
+      offset,
+      dimensionFilter: params.dimensionFilter,
+      metricFilter: params.metricFilter,
+      orderBys: params.orderBys,
+    }),
+    formatted,
+    TTL.report
+  );
   return formatted;
 }
 
@@ -131,7 +169,7 @@ export async function getMetadata(propertyId?: string) {
   return result;
 }
 
-function formatReportResponse(data: any) {
+export function formatReportResponse(data: any) {
   const dimensionHeaders = (data.dimensionHeaders || []).map((h: any) => h.name);
   const metricHeaders = (data.metricHeaders || []).map((h: any) => h.name);
 
