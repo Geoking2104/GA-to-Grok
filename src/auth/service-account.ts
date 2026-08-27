@@ -43,14 +43,17 @@ export function resolvePropertyId(propertyId?: string): string {
 }
 
 export function assertWriteEnabled() {
-  if (process.env.GTM_WRITE_ENABLED === "false") {
+  // Writes are disabled by default and must be explicitly enabled via
+  // GTM_WRITE_ENABLED=true / GA4_WRITE_ENABLED=true. Any other value
+  // (including unset) keeps writes blocked.
+  if (process.env.GTM_WRITE_ENABLED !== "true") {
     throw new Error(
-      "Write operations are disabled (GTM_WRITE_ENABLED=false). Set GTM_WRITE_ENABLED=true to allow writes."
+      "Write operations are disabled by default. Set GTM_WRITE_ENABLED=true to allow GTM writes."
     );
   }
-  if (process.env.GA4_WRITE_ENABLED === "false") {
+  if (process.env.GA4_WRITE_ENABLED !== "true") {
     throw new Error(
-      "GA4 write operations are disabled (GA4_WRITE_ENABLED=false). Set GA4_WRITE_ENABLED=true to allow secret creation."
+      "GA4 write operations are disabled by default. Set GA4_WRITE_ENABLED=true to allow secret creation."
     );
   }
 }

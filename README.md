@@ -76,9 +76,15 @@ tagmanager.edit.containers        # Phase 3 GTM writes
 Writes are gated by `confirm=true`, optional `dryRun`, and:
 
 ```bash
-GA4_WRITE_ENABLED=false   # blocks secret creation
-GTM_WRITE_ENABLED=false   # blocks GTM tag/trigger creation
+# Writes are DISABLED by default. Set both to true to allow GTM/GA4 writes.
+# (confirm=true / dryRun are still required at the tool level.)
+GA4_WRITE_ENABLED=true
+GTM_WRITE_ENABLED=true
 ```
+
+> **Safety:** writes are now blocked unless `GA4_WRITE_ENABLED=true` **and**
+> `GTM_WRITE_ENABLED=true` are set explicitly. Any other value (including unset)
+> keeps writes disabled.
 
 ---
 
@@ -149,7 +155,13 @@ Or register explicitly:
 grok mcp add --scope project ga-to-grok -- node dist/index.js --transport stdio
 ```
 
-### Remote HTTP / SSE
+### Remote HTTP (Streamable HTTP — recommended)
+
+```bash
+grok mcp add --transport http ga-to-grok https://your-host.example.com/mcp
+```
+
+### Remote HTTP (legacy SSE)
 
 ```bash
 grok mcp add --transport http ga-to-grok https://your-host.example.com/sse
@@ -159,7 +171,11 @@ grok mcp add --transport http ga-to-grok https://your-host.example.com/sse
 
 1. Deploy with `TRANSPORT=http` + public HTTPS
 2. [grok.com/connectors](https://grok.com/connectors) → **New Connector → Custom**
-3. URL: `https://your-server.com/sse`
+3. URL: `https://your-server.com/mcp` (or `/sse` for legacy clients)
+
+> **Auth:** for any public/remote deployment set `MCP_API_TOKEN` and configure the
+> client to send `Authorization: Bearer <MCP_API_TOKEN>`. Without it the HTTP
+> endpoint is open to anyone who can reach it.
 
 Details: **[docs/GROK_BUILD.md](docs/GROK_BUILD.md)** · [docs/GROK_SETUP.md](docs/GROK_SETUP.md)
 
@@ -175,11 +191,12 @@ npm run start:stdio
 node dist/index.js --transport stdio
 ```
 
-### HTTP / SSE
+### HTTP (Streamable HTTP + legacy SSE)
 
 ```bash
 npm run start:http
-# Endpoint: http://localhost:3000/sse
+# Modern endpoint:  http://localhost:3000/mcp
+# Legacy endpoint:  http://localhost:3000/sse
 ```
 
 ### Docker
