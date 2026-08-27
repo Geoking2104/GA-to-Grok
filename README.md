@@ -29,7 +29,7 @@ Grok can read GA4 data, audit GTM/sGTM setups, validate ecommerce events, config
                     │   Grok / Agents     │
                     │  (MCP tools + CLI)  │
                     └──────────┬──────────┘
-                               │ STDIO or HTTP/SSE
+                                │ STDIO or HTTP (Streamable /mcp + /sse)
                                ▼
                     ┌─────────────────────┐
                     │    GA-to-Grok       │
@@ -86,6 +86,25 @@ GTM_WRITE_ENABLED=true
 > `GTM_WRITE_ENABLED=true` are set explicitly. Any other value (including unset)
 > keeps writes disabled.
 
+### Reliability & safety features
+
+- **Input validation (zod):** every tool validates its arguments against a
+  `zod` schema. Invalid or mistyped arguments (e.g. `enddate`) are rejected
+  with a clear `Invalid arguments for "<tool>": ...` message before any Google
+  API call. The JSON schema advertised to MCP clients is derived from the same
+  zod schema, so docs and validation never drift.
+- **Enriched errors:** Google/Gaxios failures are normalized to surface
+  `status` + `errors[].reason` (e.g. `[status 403 | permissionDenied] …`) so
+  the agent can react instead of seeing a bare `err.message`.
+- **Retry & pagination:** the Google clients use a global gaxios `retryConfig`
+  (429 + 5xx, up to 4 retries). `run_report` paginates past GA4's per-request
+  row cap, so large properties are no longer silently truncated at `limit`.
+- **HTTP auth:** for any remote deployment set `MCP_API_TOKEN`; clients must
+  send `Authorization: Bearer <MCP_API_TOKEN>` (see §3).
+- **Logging:** `LOG_LEVEL` (`debug` | `info` | `warn` | `error`, default
+  `info`) controls verbosity. Logs stay on stderr so the STDIO transport keeps
+  stdout reserved for the MCP protocol.
+
 ---
 
 ## 2. Install & configure
@@ -115,7 +134,14 @@ PORT=3000
 # Optional Redis
 REDIS_URL=redis://localhost:6379
 
-# Safety (recommended in prod / CI)
+# Optional HTTP auth (recommended for any remote/public deployment).
+# Clients must send: Authorization: Bearer <MCP_API_TOKEN>
+# MCP_API_TOKEN=change-me-to-a-long-random-string
+
+# Logging verbosity: debug | info | warn | error (default info)
+LOG_LEVEL=info
+
+# Safety: writes are DISABLED by default. Set both to true to allow them.
 GA4_WRITE_ENABLED=false
 GTM_WRITE_ENABLED=false
 ```
@@ -297,8 +323,16 @@ npm run validate:ci   # scripts/ci-validate.sh
 
 | Workflow | When | What |
 |----------|------|------|
-| **CI** | push / PR | typecheck + build + CLI smoke |
+| **CI** | push / PR | typecheck + lint + test + build + CLI smoke |
 | **Validate** | manual (+ optional weekly cron) | live pipeline with SA secret |
+
+Local quality gates (both green in CI):
+
+```bash
+npm run lint      # ESLint (flat config) — 0 errors
+npm test          # Vitest unit + behavioral tests
+npm run typecheck # tsc --noEmit
+```
 
 → [docs/CI_CD.md](docs/CI_CD.md)
 
@@ -330,7 +364,10 @@ npm run validate:ci   # scripts/ci-validate.sh
 .grok/plugins/ga-to-grok/  # Plugin stub
 src/
   index.ts / server.ts / cli.ts
-  auth/ google/ tools/ cache/
+  auth/ google/ tools/ cache/ utils/
+  tools/response.ts  tools/schema.ts   # shared success/fail + zod schema helpers
+  utils/error.ts    utils/logger.ts    # error enrichment + LOG_LEVEL logger
+tests/                         # Vitest unit + behavioral tests
 scripts/ci-validate.sh
 .github/workflows/
 docs/
